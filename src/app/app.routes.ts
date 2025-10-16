@@ -32,12 +32,6 @@ path: 'categories/tree',
   canActivate: [roleGuard],
   data: { roles: ['admin', 'manager'] }
 },
- { 
-        path: 'categories/tree', 
-        loadComponent: () => import('./components/categories/category-tree/category-tree').then(c => c.CategoryTree),
-        canActivate: [roleGuard],
-        data: { roles: ['admin', 'manager'] }
-      },
 { 
   path: 'categories/new', 
   loadComponent: () => import('./components/categories/category-form/category-form').then(c => c.CategoryForm),
@@ -75,18 +69,49 @@ path: 'categories/tree',
   canActivate: [roleGuard],
   data: { roles: ['admin', 'manager'] }
 },
-// { 
-//   path: 'suppliers/new', 
-//   loadComponent: () => import('./components/suppliers/supplier-form/supplier-form').then(c => c.SupplierForm),
-//   canActivate: [roleGuard],
-//   data: { roles: ['admin', 'manager'] }
-// },
-// { 
-//   path: 'suppliers/:id/edit', 
-//   loadComponent: () => import('./components/suppliers/supplier-form/supplier-form').then(c => c.SupplierForm),
-//   canActivate: [roleGuard],
-//   data: { roles: ['admin', 'manager'] }
-// }
+{ 
+  path: 'suppliers/new', 
+  loadComponent: () => import('./components/supliers/supplier-form/supplier-form').then(c => c.SupplierForm),
+  canActivate: [roleGuard],
+  data: { roles: ['admin', 'manager'] }
+},
+{ 
+  path: 'suppliers/:id/edit', 
+  loadComponent: () => import('./components/supliers/supplier-form/supplier-form').then(c => c.SupplierForm),
+  canActivate: [roleGuard],
+  data: { roles: ['admin', 'manager'] }
+},
+{ 
+  path: 'suppliers/:id', 
+  loadComponent: () => import('./components/supliers/supplier-details/supplier-details').then(c => c.SupplierDetails),
+  canActivate: [roleGuard],
+  data: { roles: ['admin', 'manager'] }
+},
+// Add to children array in main layout route
+{ 
+  path: 'purchases', 
+  loadComponent: () => import('./components/purchases/purchase-list/purchase-list').then(c => c.PurchaseList),
+  canActivate: [roleGuard],
+  data: { roles: ['admin', 'manager'] }
+},
+{ 
+  path: 'purchases/new', 
+  loadComponent: () => import('./components/purchases/purchase-form/purchase-form').then(c => c.PurchaseForm),
+  canActivate: [roleGuard],
+  data: { roles: ['admin', 'manager'] }
+},
+{ 
+  path: 'purchases/:id', 
+  loadComponent: () => import('./components/purchases/purchase-details/purchase-details').then(c => c.PurchaseDetails),
+  canActivate: [roleGuard],
+  data: { roles: ['admin', 'manager'] }
+},
+{ 
+  path: 'purchases/:id/edit', 
+  loadComponent: () => import('./components/purchases/purchase-form/purchase-form').then(c => c.PurchaseForm),
+  canActivate: [roleGuard],
+  data: { roles: ['admin', 'manager'] }
+}
       // We'll add more routes here as we build modules
     ]
   },

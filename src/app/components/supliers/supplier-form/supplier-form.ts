@@ -58,32 +58,32 @@ export class SupplierForm implements OnInit {
     }
   }
 
-  // loadSupplier(id: string): void {
-  //   this.loading.set(true);
-  //   this.supplierService.getSupplier(id).subscribe({
-  //     next: (response) => {
-  //       this.supplier.set(response.data as Supplier);
-  //       this.formData.set({
-  //         name: response.data.name,
-  //         phone: response.data.phone,
-  //         email: response.data.email || '',
-  //         address: response.data.address || '',
-  //         contactPerson: response.data.contactPerson || '',
-  //         isActive: response.data.isActive
-  //       });
-  //       this.loading.set(false);
-  //     },
-  //     error: (error) => {
-  //       this.messageService.add({
-  //         severity: 'error',
-  //         summary: 'Error',
-  //         detail: 'Failed to load supplier'
-  //       });
-  //       this.loading.set(false);
-  //       this.router.navigate(['/suppliers']);
-  //     }
-  //   });
-  // }
+  loadSupplier(id: string): void {
+    this.loading.set(true);
+    this.supplierService.getSupplier(id).subscribe({
+      next: (response) => {
+        this.supplier.set(response.data as Supplier);
+        this.formData.set({
+          name: response.data.name,
+          phone: response.data.phone,
+          email: response.data.email || '',
+          address: response.data.address || '',
+          contactPerson: response.data.contactPerson || '',
+          isActive: response.data.isActive
+        });
+        this.loading.set(false);
+      },
+      error: (error) => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to load supplier'
+        });
+        this.loading.set(false);
+        this.router.navigate(['/suppliers']);
+      }
+    });
+  }
 
   onSubmit(): void {
     if (!this.isFormValid()) {

@@ -28,12 +28,13 @@ export class Sidebar {
   menuItems: MenuItem[] = [
     { label: 'Dashboard', icon: '📊', route: '/dashboard', roles: ['admin', 'manager', 'sales'] },
     { label: 'Point of Sale', icon: '💰', route: '/pos', roles: ['admin', 'manager', 'sales'] },
-    { label: 'Products', icon: '📦', route: '/products', roles: ['admin', 'manager'] },
     { label: 'Categories', icon: '📁', route: '/categories', roles: ['admin', 'manager'] },
+    { label: 'Products', icon: '📦', route: '/products', roles: ['admin', 'manager'] },
     { label: 'Customers', icon: '👥', route: '/customers', roles: ['admin', 'manager', 'sales'] },
     { label: 'Inventory', icon: '🏢', route: '/inventory', roles: ['admin', 'manager'] },
     { label: 'Sales', icon: '🧾', route: '/sales', roles: ['admin', 'manager', 'sales'] },
     { label: 'Suppliers', icon: '🚚', route: '/suppliers', roles: ['admin', 'manager'] },
+    { label: 'Purchases', icon: '🚚', route: '/purchases', roles: ['admin', 'manager'] },
     { label: 'Reports', icon: '📈', route: '/reports', roles: ['admin', 'manager'] },
     { label: 'Users', icon: '👨‍💼', route: '/users', roles: ['admin'] }
   ];

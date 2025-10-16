@@ -27,12 +27,21 @@ export interface SupplierFilters {
   limit?: number;
 }
 
-export interface SupplierResponse {
+// Separate response interfaces for single vs multiple suppliers
+export interface SingleSupplierResponse {
   success: boolean;
-  data: Supplier | Supplier[];
+  data: Supplier;
+}
+
+export interface MultipleSuppliersResponse {
+  success: boolean;
+  data: Supplier[];
   pagination?: {
     currentPage: number;
     totalPages: number;
     totalSuppliers: number;
   };
 }
+
+// Union type for general use
+export type SupplierResponse = SingleSupplierResponse | MultipleSuppliersResponse;

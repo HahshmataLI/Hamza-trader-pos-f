@@ -1,0 +1,203 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Purchases</h1>
+      <p class="text-gray-600">Manage purchase orders and inventory stock</p>
+    </div>
+    <p-button 
+      *ngIf="authService.hasAnyRole(['admin', 'manager'])"
+      label="New Purchase" 
+      icon="pi pi-plus" 
+      [routerLink]="['/purchases', 'new']"
+    />
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-blue-900">Total Purchases</p>
+          <p class="text-2xl font-bold text-blue-600">{{ getTotalPurchases() }}</p>
+        </div>
+        <span class="text-blue-600 text-xl">📦</span>
+      </div>
+    </div>
+
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-green-900">Total Amount</p>
+          <p class="text-2xl font-bold text-green-600">
+            {{ getTotalAmount() | currency:'USD':'symbol':'1.0-0' }}
+          </p>
+        </div>
+        <span class="text-green-600 text-xl">💰</span>
+      </div>
+    </div>
+
+    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-orange-900">Pending</p>
+          <p class="text-2xl font-bold text-orange-600">
+            {{ getStatsByStatus('Pending')?.count || 0 }}
+          </p>
+        </div>
+        <span class="text-orange-600 text-xl">⏳</span>
+      </div>
+    </div>
+
+    <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-purple-900">Completed</p>
+          <p class="text-2xl font-bold text-purple-600">
+            {{ getStatsByStatus('Completed')?.count || 0 }}
+          </p>
+        </div>
+        <span class="text-purple-600 text-xl">✅</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters & Table -->
+  <p-card>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <!-- Status Filter -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+        <p-select
+          [(ngModel)]="statusFilter"
+          [options]="statusOptions"
+          optionLabel="label"
+          optionValue="value"
+          (onChange)="onFilterChange()"
+          styleClass="w-full"
+        />
+      </div>
+
+      <!-- Summary Stats -->
+      <div class="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-2">
+        @for (stat of stats(); track stat._id) {
+          <div class="text-center p-2 border rounded-lg bg-gray-50">
+            <p class="text-sm font-medium text-gray-600">{{ stat._id }}</p>
+            <p class="text-lg font-bold text-gray-900">{{ stat.count }}</p>
+            <p class="text-xs text-gray-500">{{ stat.totalAmount | currency:'USD':'symbol':'1.0-0' }}</p>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Purchases Table -->
+    <p-table 
+      [value]="purchases()" 
+      [loading]="loading()"
+      [paginator]="true" 
+      [rows]="pagination().limit"
+      [totalRecords]="pagination().totalPurchases"
+      [rowsPerPageOptions]="[10, 25, 50, 100]"
+      styleClass="p-datatable-sm"
+      (onPage)="onPageChange($event)"
+      [lazy]="true"
+      currentPageReportTemplate="Showing {first} to {last} of {totalRecords} purchases"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th pSortableColumn="purchaseNumber" style="width: 15%">Purchase # <p-sortIcon field="purchaseNumber" /></th>
+          <th style="width: 20%">Supplier</th>
+          <th style="width: 15%">Items</th>
+          <th pSortableColumn="totalAmount" style="width: 12%">Total <p-sortIcon field="totalAmount" /></th>
+          <th pSortableColumn="purchaseDate" style="width: 12%">Date <p-sortIcon field="purchaseDate" /></th>
+          <th pSortableColumn="status" style="width: 10%">Status <p-sortIcon field="status" /></th>
+          <th style="width: 10%">Received By</th>
+          <th style="width: 6%">Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-purchase>
+        <tr>
+          <td>
+            <div class="font-mono font-semibold text-blue-600">{{ purchase.purchaseNumber }}</div>
+            <div class="text-xs text-gray-500">ID: {{ purchase._id.substring(0, 8) }}...</div>
+          </td>
+          <td>
+            <div class="font-medium text-gray-900">{{ getSupplierName(purchase) }}</div>
+          </td>
+          <td>
+            <div class="text-sm">
+              <span class="font-semibold">{{ purchase.items.length }} items</span>
+              <!-- Fix: Use component method instead of complex template expression -->
+              <div class="text-xs text-gray-500">
+                {{ getTotalUnits(purchase) }} units
+              </div>
+            </div>
+          </td>
+          <td class="font-semibold text-green-600">
+            {{ purchase.totalAmount | currency:'USD':'symbol':'1.2-2' }}
+          </td>
+          <td>
+            <div class="text-sm">
+              {{ purchase.purchaseDate | date:'shortDate' }}
+            </div>
+          </td>
+          <td>
+            <!-- Fix: Now getStatusSeverity returns proper PrimeNG severity type -->
+            <p-tag 
+              [value]="purchase.status" 
+              [severity]="getStatusSeverity(purchase.status)" 
+            />
+          </td>
+          <td>
+            <div class="text-sm text-gray-600">{{ getReceivedByName(purchase) }}</div>
+          </td>
+          <td>
+            <div class="flex space-x-1">
+              <p-button 
+                icon="pi pi-eye" 
+                severity="secondary" 
+                [text]="true" 
+                [rounded]="true"
+                [routerLink]="['/purchases', purchase._id]"
+                pTooltip="View details"
+                tooltipPosition="top"
+              />
+              <p-button 
+                *ngIf="authService.hasAnyRole(['admin', 'manager'])"
+                icon="pi pi-pencil" 
+                severity="secondary" 
+                [text]="true" 
+                [rounded]="true"
+                [routerLink]="['/purchases', purchase._id, 'edit']"
+                pTooltip="Edit purchase"
+                tooltipPosition="top"
+              />
+              <p-button 
+                *ngIf="authService.hasAnyRole(['admin', 'manager'])"
+                icon="pi pi-trash" 
+                severity="danger" 
+                [text]="true" 
+                [rounded]="true"
+                (onClick)="confirmDelete(purchase)"
+                pTooltip="Delete purchase"
+                tooltipPosition="top"
+              />
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="8" class="text-center py-8 text-gray-500">
+            No purchases found. Create your first purchase order to get started.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+</div>
+
+<p-toast />
+<p-confirmDialog />

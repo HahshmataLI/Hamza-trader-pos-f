@@ -1,0 +1,264 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">{{ pageTitle() }}</h1>
+      <p class="text-gray-600">
+        {{ isEdit() ? 'Update purchase order information' : 'Create a new purchase order from supplier' }}
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <p-button 
+        label="Cancel" 
+        icon="pi pi-times" 
+        severity="secondary"
+        (onClick)="confirmCancel()"
+      />
+      <p-button 
+        [label]="submitButtonText()" 
+        icon="pi pi-check" 
+        (onClick)="onSubmit()"
+        [loading]="loading()"
+        [disabled]="loading()"
+      />
+    </div>
+  </div>
+
+  <!-- Form -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Form -->
+    <div class="lg:col-span-2 space-y-6">
+      <!-- Basic Information -->
+      <p-card header="Basic Information">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Supplier -->
+          <div class="field">
+            <label for="supplier" class="block text-sm font-medium text-gray-700 mb-2">
+              Supplier <span class="text-red-500">*</span>
+            </label>
+            <p-select
+              id="supplier"
+              [(ngModel)]="formData().supplier"
+              [options]="suppliers()"
+              optionLabel="name"
+              optionValue="_id"
+              placeholder="Select Supplier"
+              styleClass="w-full"
+              [showClear]="true"
+            />
+          </div>
+
+          <!-- Purchase Date -->
+          <div class="field">
+            <label for="purchaseDate" class="block text-sm font-medium text-gray-700 mb-2">
+              Purchase Date
+            </label>
+            <input
+              id="purchaseDate"
+              type="date"
+              pInputText
+              [(ngModel)]="formData().purchaseDate"
+              class="w-full"
+            />
+          </div>
+
+          <!-- Status -->
+          <div class="field">
+            <label for="status" class="block text-sm font-medium text-gray-700 mb-2">
+              Status
+            </label>
+            <p-select
+              id="status"
+              [(ngModel)]="formData().status"
+              [options]="statusOptions"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-full"
+            />
+          </div>
+        </div>
+      </p-card>
+
+      <!-- Add Items -->
+      <p-card header="Add Items">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <!-- Product -->
+          <div class="field">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Product</label>
+            <p-select
+              [(ngModel)]="newItem().product"
+              [options]="filteredProducts()"
+              optionLabel="name"
+              optionValue="_id"
+              placeholder="Select Product"
+              styleClass="w-full"
+            />
+          </div>
+
+          <!-- Quantity -->
+          <div class="field">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+            <p-inputNumber
+              [(ngModel)]="newItem().quantity"
+              [min]="1"
+              mode="decimal"
+              styleClass="w-full"
+            />
+          </div>
+
+          <!-- Unit Cost -->
+          <div class="field">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Unit Cost ($)</label>
+            <p-inputNumber
+              [(ngModel)]="newItem().unitCost"
+              [min]="0"
+              mode="currency"
+              currency="USD"
+              styleClass="w-full"
+            />
+          </div>
+
+          <!-- Add Button -->
+          <div class="field flex items-end">
+            <p-button 
+              label="Add Item" 
+              icon="pi pi-plus" 
+              styleClass="w-full"
+              (onClick)="addItem()"
+            />
+          </div>
+        </div>
+      </p-card>
+
+      <!-- Items Table -->
+      <p-card header="Purchase Items">
+        @if (formData().items.length === 0) {
+          <div class="text-center py-8 text-gray-500">
+            <i class="pi pi-shopping-cart text-4xl mb-4"></i>
+            <p>No items added yet</p>
+            <p class="text-sm">Add products to create your purchase order</p>
+          </div>
+        } @else {
+          <p-table [value]="formData().items" styleClass="p-datatable-sm">
+            <ng-template pTemplate="header">
+              <tr>
+                <th style="width: 40%">Product</th>
+                <th style="width: 15%">Quantity</th>
+                <th style="width: 15%">Unit Cost</th>
+                <th style="width: 15%">Total</th>
+                <th style="width: 15%">Actions</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-item let-index="rowIndex">
+              <tr>
+                <td>
+                  <div class="font-medium">{{ getProductName(item.product) }}</div>
+                  <div class="text-xs text-gray-500">Current Stock: {{ getProductStock(item.product) }}</div>
+                </td>
+                <td>
+                  <!-- Fix: Use [(ngModel)] instead of [value] and (onInput) -->
+                  <p-inputNumber
+                    [(ngModel)]="formData().items[index].quantity"
+                    [min]="1"
+                    mode="decimal"
+                    styleClass="w-full"
+                    (onInput)="updateItemQuantity(index, formData().items[index].quantity)"
+                  />
+                </td>
+                <td>
+                  <!-- Fix: Use [(ngModel)] instead of [value] and (onInput) -->
+                  <p-inputNumber
+                    [(ngModel)]="formData().items[index].unitCost"
+                    [min]="0"
+                    mode="currency"
+                    currency="USD"
+                    styleClass="w-full"
+                    (onInput)="updateItemUnitCost(index, formData().items[index].unitCost)"
+                  />
+                </td>
+                <td class="font-semibold text-green-600">
+                  {{ getItemTotal(item) | currency:'USD':'symbol':'1.2-2' }}
+                </td>
+                <td>
+                  <p-button 
+                    icon="pi pi-trash" 
+                    severity="danger" 
+                    [text]="true" 
+                    [rounded]="true"
+                    (onClick)="removeItem(index)"
+                    pTooltip="Remove item"
+                  />
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        }
+      </p-card>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="space-y-6">
+      <!-- Order Summary -->
+      <p-card header="Order Summary">
+        <div class="space-y-3">
+          <div class="flex justify-between">
+            <span class="text-gray-600">Items:</span>
+            <span class="font-medium">{{ formData().items.length }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Total Units:</span>
+            <span class="font-medium">{{ totalItems() }}</span>
+          </div>
+          <div class="flex justify-between text-lg font-bold border-t pt-2">
+            <span class="text-gray-800">Total Amount:</span>
+            <span class="text-green-600">{{ totalAmount() | currency:'USD':'symbol':'1.2-2' }}</span>
+          </div>
+        </div>
+      </p-card>
+
+      <!-- Quick Actions -->
+      <p-card header="Quick Actions">
+        <div class="space-y-2">
+          <!-- Fix: Use method call instead of complex template expression -->
+          <p-button 
+            label="Clear All Items" 
+            icon="pi pi-trash" 
+            severity="danger"
+            styleClass="w-full justify-start"
+            [disabled]="formData().items.length === 0"
+            (onClick)="clearAllItems()"
+          />
+          <p-button 
+            label="Save as Draft" 
+            icon="pi pi-save" 
+            severity="secondary"
+            styleClass="w-full justify-start"
+            (onClick)="onSubmit()"
+          />
+        </div>
+      </p-card>
+
+      <!-- Form Validation -->
+      <!-- Fix: isFormValid() is now public -->
+      <p-card header="Validation" *ngIf="!isFormValid()">
+        <div class="space-y-2 text-sm text-orange-600">
+          @if (!formData().supplier) {
+            <div class="flex items-center space-x-2">
+              <i class="pi pi-exclamation-triangle"></i>
+              <span>Select a supplier</span>
+            </div>
+          }
+          @if (formData().items.length === 0) {
+            <div class="flex items-center space-x-2">
+              <i class="pi pi-exclamation-triangle"></i>
+              <span>Add at least one item</span>
+            </div>
+          }
+        </div>
+      </p-card>
+    </div>
+  </div>
+</div>
+
+<p-toast />
+<p-confirmDialog />

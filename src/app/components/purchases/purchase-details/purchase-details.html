@@ -1,0 +1,248 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Purchase Details</h1>
+      <p class="text-gray-600">View complete information about the purchase order</p>
+    </div>
+    <div class="flex gap-2">
+      <p-button 
+        label="Back to List" 
+        icon="pi pi-arrow-left" 
+        severity="secondary"
+        [routerLink]="['/purchases']"
+      />
+      <p-button 
+        *ngIf="authService.hasAnyRole(['admin', 'manager'])"
+        label="Edit Purchase" 
+        icon="pi pi-pencil" 
+        [routerLink]="['/purchases', purchase()?._id, 'edit']"
+      />
+      <p-button 
+        *ngIf="authService.hasAnyRole(['admin', 'manager'])"
+        label="Delete" 
+        icon="pi pi-trash" 
+        severity="danger"
+        (onClick)="confirmDelete()"
+      />
+    </div>
+  </div>
+
+  @if (loading()) {
+    <p-card>
+      <div class="flex justify-center py-8">
+        <p-progressSpinner />
+      </div>
+    </p-card>
+  } @else if (purchase()) {
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Main Information -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Purchase Header -->
+        <p-card>
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div class="flex items-center space-x-4">
+              <div class="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center">
+                <i class="pi pi-shopping-cart text-blue-600 text-2xl"></i>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold text-gray-900">{{ purchase()!.purchaseNumber }}</h2>
+                <div class="flex items-center space-x-2 mt-1">
+                  <p-tag 
+                    [value]="purchase()!.status" 
+                    [severity]="getStatusSeverity(purchase()!.status)" 
+                  />
+                  <span class="text-sm text-gray-500">
+                    Created {{ formatDate(purchase()!.createdAt) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="text-2xl font-bold text-green-600">
+                {{ purchase()!.totalAmount | currency:'USD':'symbol':'1.2-2' }}
+              </p>
+              <p class="text-sm text-gray-500">Total Amount</p>
+            </div>
+          </div>
+        </p-card>
+
+        <!-- Supplier Information -->
+        <p-card header="Supplier Information">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            @if (getSupplier()) {
+              <div>
+                <label class="block text-sm font-medium text-gray-500">Supplier Name</label>
+                <p class="text-gray-900 font-medium">{{ getSupplier()!.name }}</p>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-500">Contact Phone</label>
+                <p class="text-gray-900">{{ getSupplier()!.phone }}</p>
+              </div>
+              @if (getSupplier()!.email) {
+                <div>
+                  <label class="block text-sm font-medium text-gray-500">Email</label>
+                  <p class="text-blue-600">{{ getSupplier()!.email }}</p>
+                </div>
+              }
+              @if (getSupplier()!.contactPerson) {
+                <div>
+                  <label class="block text-sm font-medium text-gray-500">Contact Person</label>
+                  <p class="text-gray-900">{{ getSupplier()!.contactPerson }}</p>
+                </div>
+              }
+            } @else {
+              <p class="text-gray-500">Loading supplier information...</p>
+            }
+          </div>
+        </p-card>
+
+        <!-- Purchase Items -->
+        <p-card header="Purchase Items">
+          <p-table [value]="purchase()!.items" styleClass="p-datatable-sm">
+            <ng-template pTemplate="header">
+              <tr>
+                <th style="width: 40%">Product</th>
+                <th style="width: 15%">Quantity</th>
+                <th style="width: 15%">Unit Cost</th>
+                <th style="width: 15%">Total</th>
+                <th style="width: 15%">Current Stock</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-item>
+              <tr>
+                <td>
+                  <div class="font-medium">
+                    {{ getProduct(item) ? getProduct(item)!.name : 'Loading...' }}
+                  </div>
+                  @if (getProduct(item)) {
+                    <div class="text-xs text-gray-500">SKU: {{ getProduct(item)!.sku }}</div>
+                  }
+                </td>
+                <td class="font-semibold">{{ item.quantity }}</td>
+                <td class="text-green-600">{{ item.unitCost | currency:'USD':'symbol':'1.2-2' }}</td>
+                <td class="font-semibold text-green-600">
+                  {{ item.total | currency:'USD':'symbol':'1.2-2' }}
+                </td>
+                <td>
+                  @if (getProduct(item)) {
+                    <p-tag 
+                      [value]="getProduct(item)!.stock.toString()" 
+                      [severity]="getProduct(item)!.stock > 0 ? 'success' : 'danger'" 
+                    />
+                  } @else {
+                    <span class="text-gray-400">-</span>
+                  }
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="footer">
+              <tr>
+                <td colspan="3" class="text-right font-bold">Grand Total:</td>
+                <td colspan="2" class="font-bold text-green-600 text-lg">
+                  {{ purchase()!.totalAmount | currency:'USD':'symbol':'1.2-2' }}
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </p-card>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="space-y-6">
+        <!-- Status Actions -->
+        @if (canUpdateStatus() && getStatusActions().length > 0) {
+          <p-card header="Status Actions">
+            <div class="space-y-2">
+              @for (action of getStatusActions(); track action.value) {
+                <p-button 
+                  [label]="action.label" 
+                  [severity]="action.severity"
+                  styleClass="w-full justify-start"
+                  (onClick)="updateStatus(action.value)"
+                />
+              }
+            </div>
+          </p-card>
+        }
+
+        <!-- Purchase Information -->
+        <p-card header="Purchase Information">
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-500">Purchase Date</label>
+              <p class="text-gray-900">{{ formatDate(purchase()!.purchaseDate) }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-500">Status</label>
+              <p-tag 
+                [value]="purchase()!.status" 
+                [severity]="getStatusSeverity(purchase()!.status)" 
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-500">Total Items</label>
+              <p class="text-gray-900">{{ purchase()!.items.length }} items</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-500">Total Units</label>
+              <p class="text-gray-900">{{ getTotalUnits() }} units</p>
+            </div>
+          </div>
+        </p-card>
+
+        <!-- Received By -->
+        <p-card header="Received By">
+          <div class="space-y-2">
+            @if (getReceivedBy()) {
+              <div>
+                <label class="block text-sm font-medium text-gray-500">Name</label>
+                <p class="text-gray-900">{{ getReceivedBy()!.name }}</p>
+              </div>
+              @if (getReceivedBy()!.email) {
+                <div>
+                  <label class="block text-sm font-medium text-gray-500">Email</label>
+                  <p class="text-blue-600">{{ getReceivedBy()!.email }}</p>
+                </div>
+              }
+            } @else {
+              <p class="text-gray-500">Loading user information...</p>
+            }
+          </div>
+        </p-card>
+
+        <!-- Timeline -->
+   <!-- Continue from where we left off in purchase details template -->
+        <!-- Timeline -->
+        <p-card header="Timeline">
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-500">Created</label>
+              <p class="text-gray-900 text-sm">{{ formatDate(purchase()!.createdAt) }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-500">Last Updated</label>
+              <p class="text-gray-900 text-sm">{{ formatDate(purchase()!.updatedAt) }}</p>
+            </div>
+          </div>
+        </p-card>
+      </div>
+    </div>
+  } @else {
+    <p-card>
+      <div class="text-center py-8 text-gray-500">
+        <i class="pi pi-exclamation-circle text-4xl mb-4"></i>
+        <p class="text-lg">Purchase not found</p>
+        <p-button 
+          label="Back to Purchases" 
+          icon="pi pi-arrow-left" 
+          styleClass="mt-4"
+          [routerLink]="['/purchases']"
+        />
+      </div>
+    </p-card>
+  }
+</div>
+
+<p-toast />
+<p-confirmDialog />

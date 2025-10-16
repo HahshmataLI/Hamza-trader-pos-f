@@ -21,6 +21,10 @@ export class Header {
       'dashboard': 'Dashboard',
       'pos': 'Point of Sale',
       'products': 'Products',
+      'categories': 'Categories',
+      'suppliers': 'Suppliers',
+      'purchases': 'Purchases',
+
       'customers': 'Customers',
       'inventory': 'Inventory',
       'sales': 'Sales History',

@@ -28,3 +28,19 @@ export const ATTRIBUTE_TYPES = {
   SELECT: 'select',
   BOOLEAN: 'boolean'
 } as const;
+// Purchase Constants
+export const PURCHASE_STATUS = {
+  PENDING: 'Pending',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled'
+} as const;
+
+// Type for PrimeNG severity
+export type PrimeSeverity = "success" | "secondary" | "info" | "warn" | "danger" | "contrast" | null | undefined;
+
+// Type-safe mapping
+export const PURCHASE_STATUS_SEVERITY: Record<string, PrimeSeverity> = {
+  [PURCHASE_STATUS.PENDING]: 'warn',
+  [PURCHASE_STATUS.COMPLETED]: 'success',
+  [PURCHASE_STATUS.CANCELLED]: 'danger'
+};
