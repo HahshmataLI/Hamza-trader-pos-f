@@ -1,0 +1,159 @@
+ <div 
+      class="hidden lg:flex flex-col h-full bg-gray-900 text-white transition-all duration-300 ease-in-out fixed lg:relative z-30"
+      [class]="isCollapsed() ? 'w-20' : 'w-64'"
+    >
+      <!-- Logo Section -->
+      <div class="p-4 border-b border-gray-700">
+        <div class="flex items-center space-x-3" [class]="isCollapsed() ? 'justify-center' : ''">
+          <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span class="text-white font-bold text-lg">🛍️</span>
+          </div>
+          @if (!isCollapsed()) {
+            <div class="min-w-0 flex-1">
+              <h1 class="text-lg font-bold truncate">POS System</h1>
+              <p class="text-xs text-gray-400 truncate">Business Pro</p>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Navigation Menu -->
+      <nav class="flex-1 px-3 py-4 space-y-1">
+        @for (item of menuItems; track item.route) {
+          @if (hasAccess(item.roles)) {
+            <a 
+              [routerLink]="item.route"
+              routerLinkActive="bg-gray-800 text-white"
+              [routerLinkActiveOptions]="{ exact: false }"
+              class="flex items-center space-x-3 px-3 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-colors duration-200 group"
+              [class]="isCollapsed() ? 'justify-center' : ''"
+              [title]="item.label"
+            >
+              <span class="text-lg flex-shrink-0">{{ item.icon }}</span>
+              @if (!isCollapsed()) {
+                <span class="font-medium truncate">{{ item.label }}</span>
+              }
+            </a>
+          }
+        }
+      </nav>
+
+      <!-- User Info & Logout -->
+      <!-- <div class="p-3 border-t border-gray-700">
+        @if (!isCollapsed()) {
+          <div class="flex items-center space-x-3 mb-3">
+            <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <span class="text-white font-bold text-xs">
+                {{ getInitials() }}
+              </span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-medium text-white truncate">
+                {{ authService.currentUser()?.name }}
+              </p>
+              <p class="text-xs text-gray-400 capitalize truncate">
+                {{ authService.currentUser()?.role }}
+              </p>
+            </div>
+          </div>
+        } @else {
+          <div class="flex justify-center mb-3">
+            <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+              <span class="text-white font-bold text-xs">
+                {{ getInitials() }}
+              </span>
+            </div>
+          </div>
+        }
+        
+        <button 
+          (click)="logout()"
+          class="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg transition-colors duration-200"
+          [class]="isCollapsed() ? 'justify-center' : ''"
+          [title]="isCollapsed() ? 'Logout' : ''"
+        >
+          <span>🚪</span>
+          @if (!isCollapsed()) {
+            <span>Logout</span>
+          }
+        </button>
+      </div> -->
+    </div>
+
+    <!-- Mobile Sidebar Overlay -->
+    @if (isMobileOpen()) {
+      <div 
+        class="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-10"
+        (click)="closeMobile.emit()"
+      ></div>
+    }
+
+    <!-- Mobile Sidebar -->
+    <div 
+      class="lg:hidden flex flex-col h-full bg-gray-900 text-white fixed left-0 top-0 z-50 transition-transform duration-300 ease-in-out w-64"
+      [class]="isMobileOpen() ? 'translate-x-0' : '-translate-x-full'"
+    >
+      <!-- Mobile Header -->
+      <div class="p-4 border-b border-gray-700 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+            <span class="text-white font-bold text-lg">🛍️</span>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold">POS System</h1>
+            <p class="text-xs text-gray-400">Business Pro</p>
+          </div>
+        </div>
+        <button 
+          (click)="closeMobile.emit()"
+          class="text-gray-400 hover:text-white p-1"
+        >
+          <span class="text-xl">✕</span>
+        </button>
+      </div>
+
+      <!-- Mobile Navigation -->
+      <nav class="flex-1 px-3 py-4 space-y-1">
+        @for (item of menuItems; track item.route) {
+          @if (hasAccess(item.roles)) {
+            <a 
+              [routerLink]="item.route"
+              routerLinkActive="bg-gray-800 text-white"
+              [routerLinkActiveOptions]="{ exact: false }"
+              class="flex items-center space-x-3 px-3 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-colors duration-200"
+              (click)="closeMobile.emit()"
+            >
+              <span class="text-lg">{{ item.icon }}</span>
+              <span class="font-medium">{{ item.label }}</span>
+            </a>
+          }
+        }
+      </nav>
+
+      <!-- Mobile User Info -->
+      <div class="p-3 border-t border-gray-700">
+        <div class="flex items-center space-x-3 mb-3">
+          <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+            <span class="text-white font-bold text-xs">
+              {{ getInitials() }}
+            </span>
+          </div>
+          <!-- <div class="min-w-0 flex-1">
+            <p class="text-sm font-medium text-white truncate">
+              {{ authService.currentUser()?.name }}
+            </p>
+            <p class="text-xs text-gray-400 capitalize truncate">
+              {{ authService.currentUser()?.role }}
+            </p>
+          </div> -->
+        </div>
+        
+        <!-- <button 
+          (click)="logout()"
+          class="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg transition-colors duration-200"
+        >
+          <span>🚪</span>
+          <span>Logout</span>
+        </button> -->
+      </div>
+    </div>

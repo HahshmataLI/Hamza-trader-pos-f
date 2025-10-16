@@ -1,0 +1,154 @@
+<div class="min-h-screen bg-gradient-to-br from-green-50 to-blue-100 flex items-center justify-center p-4">
+      <div class="max-w-md w-full">
+        <!-- Header -->
+        <div class="text-center mb-8">
+          <div class="w-20 h-20 bg-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <span class="text-2xl text-white">🛍️</span>
+          </div>
+          <h1 class="text-3xl font-bold text-gray-900">Create Account</h1>
+          <p class="text-gray-600 mt-2">Join our POS system</p>
+        </div>
+
+        <!-- Register Form -->
+        <p-card class="shadow-xl">
+          <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="space-y-4">
+            
+            <!-- Name -->
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-gray-700">Full Name</label>
+              <input 
+                type="text" 
+                pInputText 
+                formControlName="name"
+                placeholder="Enter your full name"
+                class="w-full"
+              />
+              @if (name?.invalid && name?.touched) {
+                <div class="text-red-500 text-sm">
+                  @if (name?.errors?.['required']) {
+                    <div>Name is required</div>
+                  }
+                  @if (name?.errors?.['minlength']) {
+                    <div>Name must be at least 2 characters</div>
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- Email -->
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-gray-700">Email</label>
+              <input 
+                type="email" 
+                pInputText 
+                formControlName="email"
+                placeholder="Enter your email"
+                class="w-full"
+              />
+              @if (email?.invalid && email?.touched) {
+                <div class="text-red-500 text-sm">
+                  @if (email?.errors?.['required']) {
+                    <div>Email is required</div>
+                  }
+                  @if (email?.errors?.['email']) {
+                    <div>Please enter a valid email</div>
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- Role Selection -->
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-gray-700">Role</label>
+              <p-select
+                formControlName="role"
+                [options]="roleOptions"
+                placeholder="Select your role"
+                styleClass="w-full"
+                [showClear]="false"
+              >
+                <ng-template let-role pTemplate="item">
+                  <div class="flex items-center gap-2">
+                    <span class="text-lg">
+                      @switch (role.value) {
+                        @case ('admin') { 👨‍💼 }
+                        @case ('manager') { 👔 }
+                        @case ('sales') { 💰 }
+                      }
+                    </span>
+                    <span>{{ role.label }}</span>
+                  </div>
+                </ng-template>
+                <ng-template let-role pTemplate="selectedItem">
+                  <div class="flex items-center gap-2">
+                    <span class="text-lg">
+                      @switch (role.value) {
+                        @case ('admin') { 👨‍💼 }
+                        @case ('manager') { 👔 }
+                        @case ('sales') { 💰 }
+                      }
+                    </span>
+                    <span>{{ role.label }}</span>
+                  </div>
+                </ng-template>
+              </p-select>
+              @if (role?.invalid && role?.touched) {
+                <div class="text-red-500 text-sm">
+                  Please select a role
+                </div>
+              }
+            </div>
+
+            <!-- Password -->
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-gray-700">Password</label>
+              <p-password 
+                formControlName="password"
+                [feedback]="true"
+                placeholder="Enter your password"
+                [toggleMask]="true"
+                styleClass="w-full"
+                [inputStyle]="{'width': '100%'}"
+              />
+              @if (password?.invalid && password?.touched) {
+                <div class="text-red-500 text-sm">
+                  @if (password?.errors?.['required']) {
+                    <div>Password is required</div>
+                  }
+                  @if (password?.errors?.['minlength']) {
+                    <div>Password must be at least 6 characters</div>
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- Error Message -->
+            @if (error()) {
+              <p-message severity="error" class="w-full">
+                {{ error() }}
+              </p-message>
+            }
+
+            <!-- Submit Button -->
+            <p-button 
+              type="submit" 
+              label="Create Account" 
+              styleClass="w-full"
+              [disabled]="registerForm.invalid || authService.isLoading()"
+              [loading]="authService.isLoading()"
+            />
+
+          </form>
+
+          <!-- Login Link -->
+          <div class="text-center mt-6 pt-6 border-t border-gray-200">
+            <p class="text-gray-600">
+              Already have an account?
+              <a routerLink="/login" class="text-green-600 hover:text-green-700 font-medium ml-1">
+                Sign in
+              </a>
+            </p>
+          </div>
+        </p-card>
+      </div>
+    </div>

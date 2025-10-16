@@ -1,0 +1,101 @@
+<div class="tree-node" [class.ml-6]="hasIndentation()">
+  <div class="flex items-center gap-2 p-3 hover:bg-gray-100 rounded-lg transition-colors">
+    <!-- Expand/Collapse Button -->
+    @if (hasChildren()) {
+      <button 
+        (click)="toggleExpanded()"
+        class="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 transition-colors"
+      >
+        @if (isExpanded()) {
+          <i class="pi pi-chevron-down text-sm"></i>
+        } @else {
+          <i class="pi pi-chevron-right text-sm"></i>
+        }
+      </button>
+    } @else {
+      <div class="w-6 h-6 flex items-center justify-center">
+        <i class="pi pi-minus text-xs text-gray-400"></i>
+      </div>
+    }
+
+    <!-- Category Icon -->
+    <div [class]="getLevelIconClass()">
+      <i [class]="getLevelIcon()"></i>
+    </div>
+
+    <!-- Category Info -->
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-2">
+        <span class="font-semibold text-gray-900 truncate">{{ category().name }}</span>
+        <p-tag 
+          [value]="getLevelLabel(category().level)" 
+          [severity]="getLevelSeverity(category().level)"
+          size="small"
+        />
+        @if (category().attributes.length > 0) {
+          <p-tag 
+            [value]="category().attributes.length + ' attrs'" 
+            severity="info"
+            size="small"
+          />
+        }
+      </div>
+      @if (category().description) {
+        <p class="text-sm text-gray-600 truncate">{{ category().description }}</p>
+      }
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-1">
+      <p-button 
+        icon="pi pi-eye" 
+        severity="secondary" 
+        [text]="true" 
+        [rounded]="true"
+        size="small"
+        (onClick)="onView.emit(category()._id)"
+        pTooltip="View details"
+        tooltipPosition="top"
+      />
+      @if (authService.hasAnyRole(['admin', 'manager'])) {
+        <p-button 
+          icon="pi pi-pencil" 
+          severity="secondary" 
+          [text]="true" 
+          [rounded]="true"
+          size="small"
+          (onClick)="onEdit.emit(category()._id)"
+          pTooltip="Edit category"
+          tooltipPosition="top"
+        />
+      }
+      @if (authService.hasAnyRole(['admin', 'manager'])) {
+        <p-button 
+          icon="pi pi-trash" 
+          severity="danger" 
+          [text]="true" 
+          [rounded]="true"
+          size="small"
+          (onClick)="onDelete.emit(category())"
+          pTooltip="Delete category"
+          tooltipPosition="top"
+        />
+      }
+    </div>
+  </div>
+
+  <!-- Children -->
+  @if (hasChildren() && isExpanded()) {
+    <div class="tree-children border-l-2 border-gray-200 ml-3">
+      @for (child of category().subcategories; track child._id) {
+        <app-category-tree-node 
+          [category]="child" 
+          [level]="nextLevel()"
+          (onView)="onView.emit($event)"
+          (onEdit)="onEdit.emit($event)"
+          (onDelete)="onDelete.emit($event)"
+        ></app-category-tree-node> <!-- CLOSING TAG ADDED HERE -->
+      }
+    </div>
+  }
+</div>

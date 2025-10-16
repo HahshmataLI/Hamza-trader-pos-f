@@ -1,0 +1,75 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Category Tree</h1>
+      <p class="text-gray-600">View your category hierarchy and relationships</p>
+    </div>
+    <div class="flex gap-2">
+      <p-button 
+        label="Back to List" 
+        icon="pi pi-list" 
+        severity="secondary"
+        [routerLink]="['/categories']"
+      />
+      <p-button 
+        *ngIf="authService.hasAnyRole(['admin', 'manager'])"
+        label="Add Category" 
+        icon="pi pi-plus" 
+        [routerLink]="['/categories', 'new']"
+      />
+    </div>
+  </div>
+
+  <!-- Tree View -->
+  <p-card>
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-semibold">Category Hierarchy</h2>
+      <div class="flex gap-2">
+        <p-button 
+          label="Expand All" 
+          icon="pi pi-plus" 
+          severity="secondary" 
+          size="small"
+          (onClick)="expandAll()"
+        />
+        <p-button 
+          label="Collapse All" 
+          icon="pi pi-minus" 
+          severity="secondary" 
+          size="small"
+          (onClick)="collapseAll()"
+        />
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="flex justify-center py-8">
+        <p-progressSpinner />
+      </div>
+    } @else {
+      <div class="tree-container border rounded-lg p-4 bg-gray-50">
+        @if (categoryTree().length === 0) {
+          <div class="text-center py-8 text-gray-500">
+            No categories found. Create your first category to build the tree.
+          </div>
+        } @else {
+          @for (category of categoryTree(); track category._id) {
+            <div class="tree-node">
+              <app-category-tree-node 
+                [category]="category" 
+                [level]="0"
+                (onView)="onViewCategory($event)"
+                (onEdit)="onEditCategory($event)"
+                (onDelete)="onDeleteCategory($event)"
+              ></app-category-tree-node> <!-- CLOSING TAG ADDED HERE -->
+            </div>
+          }
+        }
+      </div>
+    }
+  </p-card>
+</div>
+
+<p-toast />
+<p-confirmDialog />
