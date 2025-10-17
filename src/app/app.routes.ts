@@ -111,7 +111,57 @@ path: 'categories/tree',
   loadComponent: () => import('./components/purchases/purchase-form/purchase-form').then(c => c.PurchaseForm),
   canActivate: [roleGuard],
   data: { roles: ['admin', 'manager'] }
-}
+},
+// Add to children array in main layout route
+   { 
+        path: 'customers', 
+        loadComponent: () => import('./components/customers/customer-list/customer-list').then(c => c.CustomerList),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager', 'sales'] }
+      },
+      { 
+        path: 'customers/new', 
+        loadComponent: () => import('./components/customers/customer-form/customer-form').then(c => c.CustomerForm),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager', 'sales'] }
+      },
+      { 
+        path: 'customers/:id', 
+        loadComponent: () => import('./components/customers/customer-details/customer-details').then(c => c.CustomerDetails),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager', 'sales'] }
+      },
+      { 
+        path: 'customers/:id/edit', 
+        loadComponent: () => import('./components/customers/customer-form/customer-form').then(c => c.CustomerForm),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager', 'sales'] }
+      },
+      // Add to children array in main layout route
+{ 
+  path: 'sales', 
+  loadComponent: () => import('./components/Sales/sale-list/sale-list').then(c => c.SaleList),
+  canActivate: [roleGuard],
+  data: { roles: ['admin', 'manager', 'sales'] }
+},
+{ 
+  path: 'sales/new', 
+  loadComponent: () => import('./components/Sales/sale-form/sale-form').then(c => c.SaleForm),
+  canActivate: [roleGuard],
+  data: { roles: ['admin', 'manager', 'sales'] }
+},
+{ 
+  path: 'salesReturn/:id', 
+  loadComponent: () => import('./components/Sales/sale-details/sale-details').then(c => c.SaleDetails),
+  canActivate: [roleGuard],
+  data: { roles: ['admin', 'manager', 'sales'] }
+},
+{ 
+  path: 'sales/:id', 
+  loadComponent: () => import('./components/Sales/sales-details/sales-details').then(c => c.SalesDetails),
+  canActivate: [roleGuard],
+  data: { roles: ['admin', 'manager', 'sales'] }
+},
       // We'll add more routes here as we build modules
     ]
   },

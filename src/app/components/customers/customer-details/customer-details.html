@@ -1,0 +1,235 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Customer Details</h1>
+      <p class="text-gray-600">View complete information about the customer</p>
+    </div>
+    <div class="flex gap-2">
+      <p-button 
+        label="Back to List" 
+        icon="pi pi-arrow-left" 
+        severity="secondary"
+        [routerLink]="['/customers']"
+      />
+      <p-button 
+        label="Edit Customer" 
+        icon="pi pi-pencil" 
+        [routerLink]="['/customers', customer()?._id, 'edit']"
+      />
+      <p-button 
+        label="New Sale" 
+        icon="pi pi-shopping-cart" 
+        severity="success"
+        [routerLink]="['/sales', 'new']" [queryParams]="{ customer: customer()?._id }"
+      />
+    </div>
+  </div>
+
+  @if (loading()) {
+    <p-card>
+      <div class="flex justify-center py-8">
+        <p-progressSpinner />
+      </div>
+    </p-card>
+  } @else if (customer()) {
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Main Information -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Customer Header -->
+        <p-card>
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div class="flex items-center space-x-4">
+              <div class="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                <span class="text-white font-bold text-2xl">
+                  {{ customer()!.name.charAt(0) }}
+                </span>
+              </div>
+              <div>
+                <h2 class="text-2xl font-bold text-gray-900">{{ customer()!.name }}</h2>
+                <div class="flex items-center space-x-2 mt-1">
+                  <p-tag 
+                    [value]="customer()!.customerType" 
+                    [severity]="getCustomerTypeSeverity(customer()!.customerType)" 
+                  />
+                  <span class="px-2 py-1 rounded-full text-xs font-medium" [class]="getLoyaltyColor()">
+                    {{ getLoyaltyLevel() }}
+                  </span>
+                  <p-tag 
+                    [value]="customer()!.isActive ? 'Active' : 'Inactive'" 
+                    [severity]="customer()!.isActive ? 'success' : 'danger'" 
+                  />
+                </div>
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="text-3xl font-bold text-green-600">
+                {{ customer()!.totalPurchases | currency:'USD':'symbol':'1.0-0' }}
+              </p>
+              <p class="text-sm text-gray-500">Total Lifetime Value</p>
+            </div>
+          </div>
+        </p-card>
+
+        <!-- Contact Information -->
+        <p-card header="Contact Information">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-500">Phone Number</label>
+                <div class="flex items-center space-x-2 mt-1">
+                  <i class="pi pi-phone text-gray-500"></i>
+                  <p class="text-gray-900 font-medium text-lg">{{ customer()!.phone }}</p>
+                </div>
+              </div>
+
+              @if (customer()!.email) {
+                <div>
+                  <label class="block text-sm font-medium text-gray-500">Email Address</label>
+                  <div class="flex items-center space-x-2 mt-1">
+                    <i class="pi pi-envelope text-gray-500"></i>
+                    <p class="text-blue-600 font-medium">{{ customer()!.email }}</p>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <div class="space-y-4">
+              @if (customer()!.address) {
+                <div>
+                  <label class="block text-sm font-medium text-gray-500">Address</label>
+                  <div class="flex items-start space-x-2 mt-1">
+                    <i class="pi pi-map-marker text-gray-500 mt-1"></i>
+                    <p class="text-gray-900 whitespace-pre-line">{{ customer()!.address }}</p>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </p-card>
+
+        <!-- Purchase History -->
+        <p-card header="Purchase History">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="text-center p-4 border rounded-lg">
+              <p class="text-2xl font-bold text-blue-600">{{ customer()!.totalPurchases | currency:'USD':'symbol':'1.0-0' }}</p>
+              <p class="text-sm text-gray-600">Total Spent</p>
+            </div>
+            <div class="text-center p-4 border rounded-lg">
+              <p class="text-2xl font-bold text-green-600">{{ formatLastPurchaseDate() }}</p>
+              <p class="text-sm text-gray-600">Last Purchase</p>
+            </div>
+            <div class="text-center p-4 border rounded-lg">
+              <p class="text-2xl font-bold text-purple-600">{{ getCustomerSince() }}</p>
+              <p class="text-sm text-gray-600">Customer Since</p>
+            </div>
+          </div>
+        </p-card>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="space-y-6">
+        <!-- Quick Actions -->
+        <p-card header="Quick Actions">
+          <div class="space-y-3">
+            <p-button 
+              label="Edit Customer" 
+              icon="pi pi-pencil" 
+              styleClass="w-full justify-start"
+              [routerLink]="['/customers', customer()?._id, 'edit']"
+            />
+            <p-button 
+              label="New Sale" 
+              icon="pi pi-shopping-cart" 
+              severity="success"
+              styleClass="w-full justify-start"
+              [routerLink]="['/sales', 'new']" [queryParams]="{ customer: customer()?._id }"
+            />
+            <p-button 
+              label="View Sales History" 
+              icon="pi pi-history" 
+              severity="info"
+              styleClass="w-full justify-start"
+              [routerLink]="['/sales']" [queryParams]="{ customer: customer()?._id }"
+            />
+            <p-button 
+              label="Send Promotion" 
+              icon="pi pi-send" 
+              severity="help"
+              styleClass="w-full justify-start"
+            />
+          </div>
+        </p-card>
+
+        <!-- Customer Information -->
+        <p-card header="Customer Information">
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-500">Customer Type</label>
+              <p-tag 
+                [value]="customer()!.customerType" 
+                [severity]="getCustomerTypeSeverity(customer()!.customerType)" 
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-500">Loyalty Level</label>
+              <span class="px-2 py-1 rounded-full text-xs font-medium" [class]="getLoyaltyColor()">
+                {{ getLoyaltyLevel() }}
+              </span>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-500">Status</label>
+              <p-tag 
+                [value]="customer()!.isActive ? 'Active' : 'Inactive'" 
+                [severity]="customer()!.isActive ? 'success' : 'danger'" 
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-500">Customer Since</label>
+              <p class="text-gray-900 text-sm">{{ getCustomerSince() }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-500">Last Updated</label>
+              <p class="text-gray-900 text-sm">{{ formatDate(customer()!.updatedAt) }}</p>
+            </div>
+          </div>
+        </p-card>
+
+        <!-- Customer Notes -->
+        <p-card header="Quick Notes">
+          <div class="space-y-2">
+            <p class="text-sm text-gray-600">
+              @if (customer()!.customerType === CUSTOMER_TYPES.VIP) {
+                ⭐ VIP customer - Provide premium service and special discounts
+              } @else if (customer()!.customerType === CUSTOMER_TYPES.WHOLESALE) {
+                🏢 Wholesale customer - Business pricing and bulk orders
+              } @else {
+                👍 Regular customer - Standard service and pricing
+              }
+            </p>
+            <p class="text-sm text-gray-600">
+              @if (customer()!.totalPurchases > 5000) {
+                💎 High-value customer - Consider special offers
+              }
+            </p>
+          </div>
+        </p-card>
+      </div>
+    </div>
+  } @else {
+    <p-card>
+      <div class="text-center py-8 text-gray-500">
+        <i class="pi pi-exclamation-circle text-4xl mb-4"></i>
+        <p class="text-lg">Customer not found</p>
+        <p-button 
+          label="Back to Customers" 
+          icon="pi pi-arrow-left" 
+          styleClass="mt-4"
+          [routerLink]="['/customers']"
+        />
+      </div>
+    </p-card>
+  }
+</div>
+
+<p-toast />

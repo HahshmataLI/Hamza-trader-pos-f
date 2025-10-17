@@ -1,0 +1,349 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Create New Sale</h1>
+      <p class="text-gray-600">Process a new sale with product selection and pricing</p>
+    </div>
+    <div class="flex gap-2">
+      <p-button 
+        label="Cancel" 
+        icon="pi pi-times" 
+        severity="secondary"
+        (onClick)="onCancel()"
+      />
+      <p-button 
+        [label]="loading() ? 'Processing...' : 'Complete Sale'" 
+        icon="pi pi-check" 
+        severity="success"
+        (onClick)="onSubmit()"
+        [loading]="loading()"
+        [disabled]="loading() || !isFormValid()"
+      />
+    </div>
+  </div>
+
+  <!-- Form -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Form -->
+    <div class="lg:col-span-2 space-y-6">
+      <!-- Customer & Payment -->
+      <p-card header="Customer & Payment Information">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Customer -->
+          <div class="field">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Customer</label>
+            <p-select
+              [(ngModel)]="formData().customer"
+              [options]="customers()"
+              optionLabel="name"
+              optionValue="_id"
+              placeholder="Select Customer (Optional)"
+              [showClear]="true"
+              styleClass="w-full"
+            >
+              <ng-template pTemplate="selectedItem">
+                <div class="flex items-center" *ngIf="formData().customer; else customerPlaceholder">
+                  @if (getSelectedCustomer()) {
+                    <div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center mr-2">
+                      <span class="text-white text-xs font-bold">{{ getSelectedCustomer()!.name.charAt(0) }}</span>
+                    </div>
+                    <span>{{ getSelectedCustomer()!.name }}</span>
+                  }
+                </div>
+                <ng-template #customerPlaceholder>
+                  <div class="text-gray-500">Walk-in Customer</div>
+                </ng-template>
+              </ng-template>
+            </p-select>
+            <small class="text-gray-500">Leave empty for walk-in customers</small>
+          </div>
+
+          <!-- Payment Method -->
+          <div class="field">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+            <p-select
+              [(ngModel)]="formData().paymentMethod"
+              [options]="paymentMethodOptions"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-full"
+            />
+          </div>
+        </div>
+      </p-card>
+
+      <!-- Add Products -->
+      <p-card header="Add Products to Sale">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+          <!-- Product -->
+          <div class="field md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Product</label>
+            <p-select
+              [(ngModel)]="newItem().product"
+              [options]="filteredProducts()"
+              optionLabel="name"
+              optionValue="_id"
+              placeholder="Select Product"
+              styleClass="w-full"
+            >
+              <ng-template let-product pTemplate="item">
+                <div class="flex justify-between items-center">
+                  <span>{{ product.name }}</span>
+                  <span class="text-sm text-gray-500">Stock: {{ product.stock }}</span>
+                </div>
+              </ng-template>
+            </p-select>
+          </div>
+
+          <!-- Quantity -->
+          <div class="field">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Qty</label>
+            <p-inputNumber
+              [(ngModel)]="newItem().quantity"
+              [min]="1"
+              [max]="getProductStock(newItem().product)"
+              mode="decimal"
+              styleClass="w-full"
+            />
+          </div>
+
+          <!-- Unit Price -->
+          <div class="field">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Unit Price</label>
+            <p-inputNumber
+              [(ngModel)]="newItem().unitSalePrice"
+              [min]="getProductMinPrice(newItem().product)"
+              mode="currency"
+              currency="USD"
+              styleClass="w-full"
+            />
+          </div>
+
+          <!-- Add Button -->
+          <div class="field flex items-end">
+            <p-button 
+              label="Add" 
+              icon="pi pi-plus" 
+              styleClass="w-full"
+              (onClick)="addItem()"
+            />
+          </div>
+        </div>
+
+        <!-- Product Info -->
+        @if (newItem().product) {
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <div class="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <span class="font-medium">MRP:</span>
+                {{ getProductMrp(newItem().product) | currency:'USD':'symbol':'1.2-2' }}
+              </div>
+              <div>
+                <span class="font-medium">Min Price:</span>
+                {{ getProductMinPrice(newItem().product) | currency:'USD':'symbol':'1.2-2' }}
+              </div>
+              <div>
+                <span class="font-medium">Available:</span>
+                {{ getProductStock(newItem().product) }} units
+              </div>
+            </div>
+          </div>
+        }
+      </p-card>
+
+      <!-- Sale Items -->
+      <p-card header="Sale Items">
+        @if (formData().items.length === 0) {
+          <div class="text-center py-8 text-gray-500">
+            <i class="pi pi-shopping-cart text-4xl mb-4"></i>
+            <p>No items added yet</p>
+            <p class="text-sm">Add products to create your sale</p>
+          </div>
+        } @else {
+          <p-table [value]="formData().items" styleClass="p-datatable-sm">
+            <ng-template pTemplate="header">
+              <tr>
+                <th style="width: 30%">Product</th>
+                <th style="width: 15%">Qty</th>
+                <th style="width: 15%">Unit Price</th>
+                <th style="width: 15%">Total</th>
+                <th style="width: 15%">Profit</th>
+                <th style="width: 10%">Actions</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-item let-index="rowIndex">
+              <tr>
+                <td>
+                  <div class="font-medium">{{ getProductName(item.product) }}</div>
+                  <div class="text-xs text-gray-500">
+                    MRP: {{ getProductMrp(item.product) | currency:'USD':'symbol':'1.2-2' }}
+                  </div>
+                </td>
+                <td>
+                  <p-inputNumber
+                    [(ngModel)]="formData().items[index].quantity"
+                    [min]="1"
+                    [max]="getProductStock(item.product)"
+                    mode="decimal"
+                    styleClass="w-full"
+                    (onInput)="updateItemQuantity(index, formData().items[index].quantity)"
+                  />
+                </td>
+                <td>
+                  <p-inputNumber
+                    [(ngModel)]="formData().items[index].unitSalePrice"
+                    [min]="getProductMinPrice(item.product)"
+                    mode="currency"
+                    currency="USD"
+                    styleClass="w-full"
+                    (onInput)="updateItemPrice(index, formData().items[index].unitSalePrice)"
+                  />
+                </td>
+                <td class="font-semibold text-green-600">
+                  {{ getItemTotal(item) | currency:'USD':'symbol':'1.2-2' }}
+                </td>
+                <td class="font-semibold" [class.text-green-600]="calculateProfit(item) > 0" [class.text-red-600]="calculateProfit(item) < 0">
+                  {{ calculateProfit(item) | currency:'USD':'symbol':'1.2-2' }}
+                </td>
+                <td>
+                  <p-button 
+                    icon="pi pi-trash" 
+                    severity="danger" 
+                    [text]="true" 
+                    [rounded]="true"
+                    (onClick)="removeItem(index)"
+                    pTooltip="Remove item"
+                  />
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        }
+      </p-card>
+
+      <!-- Notes -->
+      <p-card header="Additional Information">
+        <div class="field">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+          <textarea
+            pInputTextarea
+            [(ngModel)]="formData().notes"
+            placeholder="Any additional notes about this sale..."
+            [rows]="3"
+            class="w-full"
+          ></textarea>
+        </div>
+      </p-card>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="space-y-6">
+      <!-- Order Summary -->
+      <p-card header="Order Summary">
+        <div class="space-y-3">
+          <div class="flex justify-between">
+            <span class="text-gray-600">Items:</span>
+            <span class="font-medium">{{ formData().items.length }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Total Units:</span>
+            <span class="font-medium">{{ totalItems() }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Subtotal:</span>
+            <span class="font-medium">{{ subtotal() | currency:'USD':'symbol':'1.2-2' }}</span>
+          </div>
+          
+          <!-- Discount -->
+          <div class="flex justify-between items-center">
+            <span class="text-gray-600">Discount:</span>
+            <div class="flex items-center space-x-2">
+              <p-inputNumber
+                [(ngModel)]="formData().discount"
+                [min]="0"
+                [max]="subtotal()"
+                mode="currency"
+                currency="USD"
+                styleClass="w-32"
+              />
+              <div class="flex space-x-1">
+                <p-button 
+                  icon="pi pi-percentage" 
+                  [text]="true" 
+                  size="small"
+                  (onClick)="applyDiscount(5)"
+                  pTooltip="5% Discount"
+                />
+                <p-button 
+                  icon="pi pi-percentage" 
+                  [text]="true" 
+                  size="small"
+                  (onClick)="applyDiscount(10)"
+                  pTooltip="10% Discount"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Tax -->
+          <div class="flex justify-between">
+            <span class="text-gray-600">Tax:</span>
+            <p-inputNumber
+              [(ngModel)]="formData().taxAmount"
+              [min]="0"
+              mode="currency"
+              currency="USD"
+              styleClass="w-32"
+            />
+          </div>
+
+          <div class="flex justify-between text-lg font-bold border-t pt-2">
+            <span class="text-gray-800">Total Amount:</span>
+            <span class="text-green-600">{{ totalAmount() | currency:'USD':'symbol':'1.2-2' }}</span>
+          </div>
+
+          <div class="flex justify-between text-sm border-t pt-2">
+            <span class="text-gray-600">Total Profit:</span>
+            <span class="font-medium text-green-600">{{ getTotalProfit() | currency:'USD':'symbol':'1.2-2' }}</span>
+          </div>
+        </div>
+      </p-card>
+
+      <!-- Quick Actions -->
+      <p-card header="Quick Actions">
+        <div class="space-y-2">
+          <p-button 
+            label="Clear All Items" 
+            icon="pi pi-trash" 
+            severity="danger"
+            styleClass="w-full justify-start"
+            [disabled]="formData().items.length === 0"
+            (onClick)="clearAllItems()"
+          />
+          <p-button 
+            label="Apply 10% Discount" 
+            icon="pi pi-percentage" 
+            severity="secondary"
+            styleClass="w-full justify-start"
+            [disabled]="formData().items.length === 0"
+            (onClick)="applyDiscount(10)"
+          />
+        </div>
+      </p-card>
+
+      <!-- Validation -->
+      <p-card header="Validation" *ngIf="!isFormValid()">
+        <div class="space-y-2 text-sm text-orange-600">
+          <div class="flex items-center space-x-2">
+            <i class="pi pi-exclamation-triangle"></i>
+            <span>Add at least one item to create sale</span>
+          </div>
+        </div>
+      </p-card>
+    </div>
+  </div>
+</div>
+
+<p-toast />
+<p-confirmDialog />

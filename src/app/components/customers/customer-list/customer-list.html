@@ -1,0 +1,192 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Customers</h1>
+      <p class="text-gray-600">Manage your customer database and relationships</p>
+    </div>
+    <p-button 
+      label="Add Customer" 
+      icon="pi pi-plus" 
+      [routerLink]="['/customers', 'new']"
+    />
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-blue-900">Total Customers</p>
+          <p class="text-2xl font-bold text-blue-600">{{ pagination().totalCustomers || 0 }}</p>
+        </div>
+        <span class="text-blue-600 text-xl">👥</span>
+      </div>
+    </div>
+
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-green-900">Total Revenue</p>
+          <p class="text-2xl font-bold text-green-600">
+            {{ getTotalRevenue() | currency:'USD':'symbol':'1.0-0' }}
+          </p>
+        </div>
+        <span class="text-green-600 text-xl">💰</span>
+      </div>
+    </div>
+
+    <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-purple-900">VIP Customers</p>
+          <p class="text-2xl font-bold text-purple-600">{{ getVIPCustomersCount() }}</p>
+        </div>
+        <span class="text-purple-600 text-xl">⭐</span>
+      </div>
+    </div>
+
+    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-orange-900">Active Customers</p>
+          <!-- Fix: Use computed property instead of complex template expression -->
+          <p class="text-2xl font-bold text-orange-600">
+            {{ activeCustomersCount() }}
+          </p>
+        </div>
+        <span class="text-orange-600 text-xl">✅</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Table -->
+  <p-card>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <!-- Search -->
+      <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Search Customers</label>
+        <input 
+          type="text" 
+          pInputText 
+          [(ngModel)]="searchTerm"
+          (input)="onSearch()"
+          placeholder="Search by name, phone, or email..."
+          class="w-full"
+        />
+      </div>
+    </div>
+
+    <!-- Customers Table -->
+    <p-table 
+      [value]="customers()" 
+      [loading]="loading()"
+      [paginator]="true" 
+      [rows]="pagination().limit"
+      [totalRecords]="pagination().totalCustomers"
+      [rowsPerPageOptions]="[10, 25, 50, 100]"
+      styleClass="p-datatable-sm"
+      (onPage)="onPageChange($event)"
+      [lazy]="true"
+      currentPageReportTemplate="Showing {first} to {last} of {totalRecords} customers"
+      [globalFilterFields]="['name','phone','email']"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th pSortableColumn="name" style="width: 25%">Customer <p-sortIcon field="name" /></th>
+          <th style="width: 20%">Contact Info</th>
+          <th pSortableColumn="customerType" style="width: 15%">Type <p-sortIcon field="customerType" /></th>
+          <th pSortableColumn="totalPurchases" style="width: 15%">Total Spent <p-sortIcon field="totalPurchases" /></th>
+          <th pSortableColumn="lastPurchaseDate" style="width: 15%">Last Purchase <p-sortIcon field="lastPurchaseDate" /></th>
+          <th style="width: 10%">Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-customer>
+        <tr>
+          <td>
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                <span class="text-white font-semibold text-sm">{{ customer.name.charAt(0) }}</span>
+              </div>
+              <div>
+                <p class="font-semibold text-gray-900">{{ customer.name }}</p>
+                <p class="text-xs text-gray-500">Created: {{ customer.createdAt | date:'shortDate' }}</p>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="space-y-1">
+              <div class="flex items-center space-x-2">
+                <i class="pi pi-phone text-gray-500 text-sm"></i>
+                <span class="text-sm">{{ customer.phone }}</span>
+              </div>
+              @if (customer.email) {
+                <div class="flex items-center space-x-2">
+                  <i class="pi pi-envelope text-gray-500 text-sm"></i>
+                  <span class="text-sm text-blue-600">{{ customer.email }}</span>
+                </div>
+              }
+              @if (customer.address) {
+                <div class="flex items-center space-x-2">
+                  <i class="pi pi-map-marker text-gray-500 text-sm"></i>
+                  <span class="text-sm text-gray-600 truncate">{{ customer.address }}</span>
+                </div>
+              }
+            </div>
+          </td>
+          <td>
+            <!-- Fix: Now getCustomerTypeSeverity returns proper PrimeNG severity type -->
+            <p-tag 
+              [value]="customer.customerType" 
+              [severity]="getCustomerTypeSeverity(customer.customerType)" 
+            />
+          </td>
+          <td>
+            <div class="font-semibold text-green-600">
+              {{ customer.totalPurchases | currency:'USD':'symbol':'1.0-0' }}
+            </div>
+          </td>
+          <td>
+            <div class="text-sm text-gray-600">
+              {{ formatLastPurchaseDate(customer) }}
+            </div>
+          </td>
+          <td>
+            <div class="flex space-x-1">
+              <p-button 
+                icon="pi pi-eye" 
+                severity="secondary" 
+                [text]="true" 
+                [rounded]="true"
+                [routerLink]="['/customers', customer._id]"
+                pTooltip="View details"
+                tooltipPosition="top"
+              />
+              <p-button 
+                icon="pi pi-pencil" 
+                severity="secondary" 
+                [text]="true" 
+                [rounded]="true"
+                [routerLink]="['/customers', customer._id, 'edit']"
+                pTooltip="Edit customer"
+                tooltipPosition="top"
+              />
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="6" class="text-center py-8 text-gray-500">
+            No customers found. Add your first customer to get started.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+</div>
+
+<p-toast />
+<p-confirmDialog />

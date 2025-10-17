@@ -1,0 +1,193 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Process Return</h1>
+      <p class="text-gray-600">Return items from sale {{ sale()?.invoiceNumber }}</p>
+    </div>
+    <div class="flex gap-2">
+      <p-button label="Cancel" icon="pi pi-times" severity="secondary" (onClick)="onCancel()" />
+      <p-button
+        [label]="loading() ? 'Processing...' : 'Process Return'"
+        icon="pi pi-check"
+        severity="warn"
+        (onClick)="onSubmit()"
+        [loading]="loading()"
+        [disabled]="loading() || !isFormValid()"
+      />
+    </div>
+  </div>
+
+  @if (loading()) {
+  <p-card>
+    <div class="flex justify-center py-8">
+      <p-progressSpinner />
+    </div>
+  </p-card>
+  } @else if (sale()) {
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Form -->
+    <div class="lg:col-span-2 space-y-6">
+      <!-- Sale Information -->
+      <p-card header="Sale Information">
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div><span class="font-medium">Invoice:</span> {{ sale()!.invoiceNumber }}</div>
+          <div><span class="font-medium">Date:</span> {{ formatDate(sale()!.saleDate) }}</div>
+          <div>
+            <span class="font-medium">Total Amount:</span>
+            <span class="text-green-600">{{
+              sale()!.totalAmount | currency : 'USD' : 'symbol' : '1.2-2'
+            }}</span>
+          </div>
+          <div><span class="font-medium">Items:</span> {{ sale()!.items.length }}</div>
+        </div>
+      </p-card>
+
+      <!-- Return Items -->
+      <p-card header="Select Items to Return">
+        <p-table [value]="sale()!.items" [rows]="10" [paginator]="true" styleClass="p-datatable-sm">
+          <ng-template pTemplate="header">
+            <tr>
+              <th style="width: 40%">Product</th>
+              <th style="width: 15%">Sold Qty</th>
+              <th style="width: 15%">Already Returned</th>
+              <th style="width: 15%">Return Qty</th>
+              <th style="width: 15%">Refund Amount</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-item>
+            <tr>
+              <td>
+                <div class="font-medium">
+                  {{ getProduct(item) ? getProduct(item)!.name : 'Loading...' }}
+                </div>
+                <div class="text-xs text-gray-500">
+                  Sale Price: {{ item.unitSalePrice | currency : 'USD' : 'symbol' : '1.2-2' }}
+                </div>
+              </td>
+              <td class="text-center">{{ item.quantity }}</td>
+              <td class="text-center">
+                <span [class.text-orange-600]="item.returnedQuantity > 0">
+                  {{ item.returnedQuantity || 0 }}
+                </span>
+              </td>
+              <td>
+ <p-inputNumber
+  [ngModel]="getReturnQuantity(item._id!)"
+  [min]="0"
+  [max]="getMaxReturnable(item._id!)"
+  mode="decimal"
+  styleClass="w-full"
+  (ngModelChange)="updateReturnQuantity(item._id!, $event)"
+/>
+  <div class="text-xs text-gray-500 mt-1">
+    Max: {{ getMaxReturnable(item._id!) }}
+  </div>
+</td>
+<td class="text-green-600 font-semibold">
+  {{ (item.unitSalePrice * (getReturnItem(item._id!)?.quantity || 0)) | currency:'USD':'symbol':'1.2-2' }}
+</td>
+            </tr>
+          </ng-template>
+        </p-table>
+
+        @if (!hasReturns()) {
+        <div class="text-center py-4 text-orange-600">
+          <i class="pi pi-exclamation-triangle mr-2"></i>
+          Select items to return by entering quantities above
+        </div>
+        }
+      </p-card>
+
+      <!-- Return Reason -->
+      <p-card header="Return Reason">
+        <div class="field">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Reason for Return <span class="text-red-500">*</span>
+          </label>
+          <textarea
+            pInputTextarea
+            [(ngModel)]="returnData().reason"
+            placeholder="Please provide the reason for this return..."
+            [rows]="3"
+            class="w-full"
+            required
+          ></textarea>
+          <small class="text-gray-500">This reason will be recorded with the return</small>
+        </div>
+      </p-card>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="space-y-6">
+      <!-- Return Summary -->
+      <p-card header="Return Summary">
+        <div class="space-y-3">
+          <div class="flex justify-between">
+            <span class="text-gray-600">Items to Return:</span>
+            <span class="font-medium">{{ getTotalReturnItems() }}</span>
+          </div>
+          <div class="flex justify-between text-lg font-bold border-t pt-2">
+            <span class="text-gray-800">Total Refund:</span>
+            <span class="text-green-600">{{
+              getTotalRefundAmount() | currency : 'USD' : 'symbol' : '1.2-2'
+            }}</span>
+          </div>
+        </div>
+      </p-card>
+
+      <!-- Quick Actions -->
+      <p-card header="Quick Actions">
+        <div class="space-y-2">
+          <p-button
+            label="Return All Available"
+            icon="pi pi-undo"
+            severity="secondary"
+            styleClass="w-full justify-start"
+            (onClick)="returnAllAvailable()"
+          />
+          <p-button
+            label="Clear All Returns"
+            icon="pi pi-trash"
+            severity="danger"
+            styleClass="w-full justify-start"
+            (onClick)="clearAllReturns()"
+          />
+        </div>
+      </p-card>
+
+      <!-- Validation -->
+      @if (!isFormValid()) {
+      <p-card header="Validation">
+        <div class="space-y-2 text-sm text-orange-600">
+          @if (!hasReturns()) {
+          <div class="flex items-center space-x-2">
+            <i class="pi pi-exclamation-triangle"></i>
+            <span>Select at least one item to return</span>
+          </div>
+          } @if (!returnData().reason.trim()) {
+          <div class="flex items-center space-x-2">
+            <i class="pi pi-exclamation-triangle"></i>
+            <span>Provide a reason for the return</span>
+          </div>
+          }
+        </div>
+      </p-card>
+      }
+
+      <!-- Important Notes -->
+      <p-card header="Important Notes">
+        <div class="space-y-2 text-sm text-gray-600">
+          <p>✅ Items returned will be added back to inventory stock</p>
+          <p>✅ Refund amount will be calculated based on sale prices</p>
+          <p>✅ Return reason will be recorded for reporting</p>
+          <p>⚠️ This action cannot be undone</p>
+        </div>
+      </p-card>
+    </div>
+  </div>
+  }
+</div>
+
+<p-toast />
+<p-confirmDialog />
