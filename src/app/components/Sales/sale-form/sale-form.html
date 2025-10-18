@@ -256,47 +256,47 @@
           </div>
           
           <!-- Discount -->
-          <div class="flex justify-between items-center">
-            <span class="text-gray-600">Discount:</span>
-            <div class="flex items-center space-x-2">
-              <p-inputNumber
-                [(ngModel)]="formData().discount"
-                [min]="0"
-                [max]="subtotal()"
-                mode="currency"
-                currency="USD"
-                styleClass="w-32"
-              />
-              <div class="flex space-x-1">
-                <p-button 
-                  icon="pi pi-percentage" 
-                  [text]="true" 
-                  size="small"
-                  (onClick)="applyDiscount(5)"
-                  pTooltip="5% Discount"
-                />
-                <p-button 
-                  icon="pi pi-percentage" 
-                  [text]="true" 
-                  size="small"
-                  (onClick)="applyDiscount(10)"
-                  pTooltip="10% Discount"
-                />
-              </div>
-            </div>
-          </div>
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+  <span class="text-gray-600">Discount:</span>
+  <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-2 w-full sm:w-auto">
+    <p-inputNumber
+      [(ngModel)]="formData().discount"
+      [min]="0"
+      [max]="subtotal()"
+      mode="currency"
+      currency="USD"
+      styleClass="w-full sm:w-32"
+    />
+    <div class="flex space-x-1 mt-2 sm:mt-0 justify-end sm:justify-start">
+      <p-button 
+        icon="pi pi-percentage" 
+        [text]="true" 
+        size="small"
+        (onClick)="applyDiscount(5)"
+        pTooltip="5% Discount"
+      />
+      <p-button 
+        icon="pi pi-percentage" 
+        [text]="true" 
+        size="small"
+        (onClick)="applyDiscount(10)"
+        pTooltip="10% Discount"
+      />
+    </div>
+  </div>
+</div>
 
           <!-- Tax -->
-          <div class="flex justify-between">
-            <span class="text-gray-600">Tax:</span>
-            <p-inputNumber
-              [(ngModel)]="formData().taxAmount"
-              [min]="0"
-              mode="currency"
-              currency="USD"
-              styleClass="w-32"
-            />
-          </div>
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+  <span class="text-gray-600">Tax:</span>
+  <p-inputNumber
+    [(ngModel)]="formData().taxAmount"
+    [min]="0"
+    mode="currency"
+    currency="USD"
+    styleClass="w-full sm:w-32"
+  />
+</div>
 
           <div class="flex justify-between text-lg font-bold border-t pt-2">
             <span class="text-gray-800">Total Amount:</span>

@@ -1,70 +1,242 @@
-<div class="space-y-6">
-      <!-- Welcome Section -->
-      <div class="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl p-4 md:p-6 text-white">
-        <h1 class="text-xl md:text-2xl font-bold mb-2">Welcome back, {{ authService.currentUser()?.name }}! 👋</h1>
-        <p class="text-blue-100 text-sm md:text-base">Here's what's happening with your store today.</p>
-      </div>
+<div class="dashboard-container p-4">
+  <!-- Header -->
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+    <p class="text-gray-600">Welcome to your POS management system</p>
+  </div>
 
-      <!-- Stats Grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <p-card class="text-center">
-          <div class="space-y-2">
-            <div class="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <span class="text-green-600 text-lg md:text-xl">💰</span>
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      @for (item of [1,2,3,4]; track item) {
+        <p-card>
+          <div class="flex items-center gap-4">
+            <p-skeleton size="3rem" shape="circle"></p-skeleton>
+            <div class="flex-1">
+              <p-skeleton width="60%" class="mb-2"></p-skeleton>
+              <p-skeleton width="40%"></p-skeleton>
             </div>
-            <h3 class="text-xl md:text-2xl font-bold text-gray-900">$2,847</h3>
-            <p class="text-gray-600 text-sm md:text-base">Today's Sales</p>
           </div>
         </p-card>
-
-        <p-card class="text-center">
-          <div class="space-y-2">
-            <div class="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-              <span class="text-blue-600 text-lg md:text-xl">📦</span>
-            </div>
-            <h3 class="text-xl md:text-2xl font-bold text-gray-900">156</h3>
-            <p class="text-gray-600 text-sm md:text-base">Total Products</p>
-          </div>
-        </p-card>
-
-        <p-card class="text-center">
-          <div class="space-y-2">
-            <div class="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto">
-              <span class="text-purple-600 text-lg md:text-xl">👥</span>
-            </div>
-            <h3 class="text-xl md:text-2xl font-bold text-gray-900">89</h3>
-            <p class="text-gray-600 text-sm md:text-base">Customers</p>
-          </div>
-        </p-card>
-
-        <p-card class="text-center">
-          <div class="space-y-2">
-            <div class="w-10 h-10 md:w-12 md:h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto">
-              <span class="text-orange-600 text-lg md:text-xl">🧾</span>
-            </div>
-            <h3 class="text-xl md:text-2xl font-bold text-gray-900">24</h3>
-            <p class="text-gray-600 text-sm md:text-base">Today's Orders</p>
-          </div>
-        </p-card>
-      </div>
-
-      <!-- User Info -->
-      <p-card header="Your Account Information">
-        <div class="space-y-3">
-          <div class="flex justify-between items-center py-2 border-b">
-            <span class="font-medium text-gray-600">Name</span>
-            <span class="text-gray-900">{{ authService.currentUser()?.name }}</span>
-          </div>
-          <div class="flex justify-between items-center py-2 border-b">
-            <span class="font-medium text-gray-600">Email</span>
-            <span class="text-gray-900">{{ authService.currentUser()?.email }}</span>
-          </div>
-          <div class="flex justify-between items-center py-2">
-            <span class="font-medium text-gray-600">Role</span>
-            <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm capitalize">
-              {{ authService.currentUser()?.role }}
-            </span>
-          </div>
-        </div>
-      </p-card>
+      }
     </div>
+  }
+
+  <!-- Error State -->
+  @if (error() && !loading()) {
+    <div class="mb-6">
+      <p-message severity="error" [text]="error()"></p-message>
+      <p-button 
+        label="Retry" 
+        icon="pi pi-refresh" 
+        (onClick)="loadDashboardData()"
+        class="mt-2">
+      </p-button>
+    </div>
+  }
+
+  <!-- Dashboard Content -->
+  @if (!loading() && dashboardData(); as data) {
+    <div class="space-y-6">
+      
+      <!-- Key Metrics -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Today's Revenue -->
+        <p-card class="cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/sales')">
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Today's Revenue</p>
+              <p class="text-2xl font-bold text-gray-900">
+                {{ formatCurrency(data.today.revenue) }}
+              </p>
+              <p class="text-sm text-gray-500">
+                {{ data.today.salesCount }} sales
+              </p>
+            </div>
+            <div class="p-3 bg-blue-100 rounded-full">
+              <i class="pi pi-wallet text-blue-600 text-xl"></i>
+            </div>
+          </div>
+        </p-card>
+
+        <!-- Monthly Revenue -->
+        <p-card class="cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/sales')">
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Monthly Revenue</p>
+              <p class="text-2xl font-bold text-gray-900">
+                {{ formatCurrency(data.monthly.revenue) }}
+              </p>
+              <p class="text-sm text-gray-500">
+                {{ data.monthly.salesCount }} sales
+              </p>
+            </div>
+            <div class="p-3 bg-green-100 rounded-full">
+              <i class="pi pi-chart-line text-green-600 text-xl"></i>
+            </div>
+          </div>
+        </p-card>
+
+        <!-- Low Stock Alert -->
+        <p-card class="cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/products')">
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Low Stock Items</p>
+              <p class="text-2xl font-bold text-gray-900">
+                {{ data.inventory.lowStockCount }}
+              </p>
+              @if (data.inventory.lowStockCount > 0) {
+                <p-tag 
+                  severity="danger" 
+                  value="Attention Needed"
+                  class="mt-1">
+                </p-tag>
+              } @else {
+                <p class="text-sm text-green-600">All good</p>
+              }
+            </div>
+            <div class="p-3 bg-red-100 rounded-full">
+              <i class="pi pi-exclamation-triangle text-red-600 text-xl"></i>
+            </div>
+          </div>
+        </p-card>
+
+        <!-- Total Customers -->
+        <p-card class="cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/customers')">
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Total Customers</p>
+              <p class="text-2xl font-bold text-gray-900">
+                {{ data.customers.total }}
+              </p>
+              <p class="text-sm text-gray-500">
+                Active customers
+              </p>
+            </div>
+            <div class="p-3 bg-purple-100 rounded-full">
+              <i class="pi pi-users text-purple-600 text-xl"></i>
+            </div>
+          </div>
+        </p-card>
+      </div>
+
+      <!-- Charts and Recent Sales -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Sales Chart -->
+        <div class="lg:col-span-2">
+          <p-card header="Revenue Overview" class="h-full">
+            <p-chart 
+              type="bar" 
+              [data]="salesChartData()" 
+              [options]="chartOptions()"
+              height="300px">
+            </p-chart>
+          </p-card>
+        </div>
+
+        <!-- Inventory Chart -->
+        <div>
+          <p-card header="Inventory Status" class="h-full">
+            <p-chart 
+              type="doughnut" 
+              [data]="inventoryChartData()" 
+              [options]="chartOptions()"
+              height="300px">
+            </p-chart>
+            <div class="mt-4 text-center">
+              <p class="text-lg font-semibold">
+                Total Products: {{ data.products.total }}
+              </p>
+            </div>
+          </p-card>
+        </div>
+      </div>
+
+      <!-- Recent Sales -->
+      <div class="grid grid-cols-1">
+        <p-card header="Recent Sales" class="w-full">
+          <p-table 
+            [value]="data.recentSales" 
+            [paginator]="false" 
+            [rows]="5"
+            styleClass="p-datatable-sm">
+            <ng-template pTemplate="header">
+              <tr>
+                <th>Invoice #</th>
+                <th>Customer</th>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Actions</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-sale>
+              <tr>
+                <td class="font-mono">{{ sale.invoiceNumber }}</td>
+                <td>{{ sale.customer?.name || 'Walk-in Customer' }}</td>
+                <td>{{ sale.saleDate | date:'short' }}</td>
+                <td class="font-semibold">{{ formatCurrency(sale.totalAmount) }}</td>
+                <td>
+                  <p-button 
+                    icon="pi pi-eye" 
+                    styleClass="p-button-sm p-button-text"
+                    (onClick)="navigateTo('/sales')">
+                  </p-button>
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+              <tr>
+                <td colspan="5" class="text-center py-4 text-gray-500">
+                  No recent sales found
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+          <div class="mt-4 text-right">
+            <p-button 
+              label="View All Sales" 
+              icon="pi pi-list"
+              (onClick)="navigateTo('/sales')">
+            </p-button>
+          </div>
+        </p-card>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <p-card class="text-center cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/sales/new')">
+          <div class="p-4">
+            <i class="pi pi-shopping-cart text-3xl text-blue-600 mb-3"></i>
+            <h3 class="font-semibold text-lg">New Sale</h3>
+            <p class="text-gray-600 text-sm">Create a new sales transaction</p>
+          </div>
+        </p-card>
+
+        <p-card class="text-center cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/products')">
+          <div class="p-4">
+            <i class="pi pi-box text-3xl text-green-600 mb-3"></i>
+            <h3 class="font-semibold text-lg">Manage Products</h3>
+            <p class="text-gray-600 text-sm">View and edit products</p>
+          </div>
+        </p-card>
+
+        <p-card class="text-center cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/purchases/new')">
+          <div class="p-4">
+            <i class="pi pi-shopping-bag text-3xl text-orange-600 mb-3"></i>
+            <h3 class="font-semibold text-lg">New Purchase</h3>
+            <p class="text-gray-600 text-sm">Add stock from suppliers</p>
+          </div>
+        </p-card>
+
+        <p-card class="text-center cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/customers')">
+          <div class="p-4">
+            <i class="pi pi-user-plus text-3xl text-purple-600 mb-3"></i>
+            <h3 class="font-semibold text-lg">Add Customer</h3>
+            <p class="text-gray-600 text-sm">Register new customer</p>
+          </div>
+        </p-card>
+      </div>
+    </div>
+  }
+</div>

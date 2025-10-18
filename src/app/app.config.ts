@@ -8,16 +8,19 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { authInterceptor } from './interceptors/auth.interceptor';
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideBrowserGlobalErrorListeners(),
     provideZonelessChangeDetection(),
     provideHttpClient(
-     withInterceptors([authInterceptor])
+      withInterceptors([authInterceptor])
     ),
-    provideRouter(routes),provideAnimationsAsync(),
-        providePrimeNG({
-            theme: {
-                preset: Aura
-            }
-        })
+    provideRouter(routes),
+    provideAnimationsAsync(), // Correct - using async animations
+    providePrimeNG({
+      theme: {
+        preset: Aura,
+        options: {
+          darkModeSelector: false || 'none'
+        }
+      }
+    })
   ]
 };
