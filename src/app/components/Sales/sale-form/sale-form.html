@@ -115,7 +115,8 @@
               [(ngModel)]="newItem().unitSalePrice"
               [min]="getProductMinPrice(newItem().product)"
               mode="currency"
-              currency="USD"
+              currency="PKR"
+              locale="en-PK"
               styleClass="w-full"
             />
           </div>
@@ -137,11 +138,11 @@
             <div class="grid grid-cols-3 gap-4 text-sm">
               <div>
                 <span class="font-medium">MRP:</span>
-                {{ getProductMrp(newItem().product) | currency:'USD':'symbol':'1.2-2' }}
+                {{ getProductMrp(newItem().product) | currency:'PKR':'symbol':'1.2-2' }}
               </div>
               <div>
                 <span class="font-medium">Min Price:</span>
-                {{ getProductMinPrice(newItem().product) | currency:'USD':'symbol':'1.2-2' }}
+                {{ getProductMinPrice(newItem().product) | currency:'PKR':'symbol':'1.2-2' }}
               </div>
               <div>
                 <span class="font-medium">Available:</span>
@@ -177,7 +178,7 @@
                 <td>
                   <div class="font-medium">{{ getProductName(item.product) }}</div>
                   <div class="text-xs text-gray-500">
-                    MRP: {{ getProductMrp(item.product) | currency:'USD':'symbol':'1.2-2' }}
+                    MRP: {{ getProductMrp(item.product) | currency:'PKR':'symbol':'1.2-2' }}
                   </div>
                 </td>
                 <td>
@@ -195,16 +196,17 @@
                     [(ngModel)]="formData().items[index].unitSalePrice"
                     [min]="getProductMinPrice(item.product)"
                     mode="currency"
-                    currency="USD"
+                    currency="PKR"
+                    locale="en-PK"
                     styleClass="w-full"
                     (onInput)="updateItemPrice(index, formData().items[index].unitSalePrice)"
                   />
                 </td>
                 <td class="font-semibold text-green-600">
-                  {{ getItemTotal(item) | currency:'USD':'symbol':'1.2-2' }}
+                  {{ getItemTotal(item) | currency:'PKR':'symbol':'1.2-2' }}
                 </td>
                 <td class="font-semibold" [class.text-green-600]="calculateProfit(item) > 0" [class.text-red-600]="calculateProfit(item) < 0">
-                  {{ calculateProfit(item) | currency:'USD':'symbol':'1.2-2' }}
+                  {{ calculateProfit(item) | currency:'PKR':'symbol':'1.2-2' }}
                 </td>
                 <td>
                   <p-button 
@@ -252,7 +254,7 @@
           </div>
           <div class="flex justify-between">
             <span class="text-gray-600">Subtotal:</span>
-            <span class="font-medium">{{ subtotal() | currency:'USD':'symbol':'1.2-2' }}</span>
+            <span class="font-medium">{{ subtotal() | currency:'PKR':'symbol':'1.2-2' }}</span>
           </div>
           
           <!-- Discount -->
@@ -264,7 +266,8 @@
       [min]="0"
       [max]="subtotal()"
       mode="currency"
-      currency="USD"
+      currency="PKR"
+      locale="en-PK"
       styleClass="w-full sm:w-32"
     />
     <div class="flex space-x-1 mt-2 sm:mt-0 justify-end sm:justify-start">
@@ -293,19 +296,20 @@
     [(ngModel)]="formData().taxAmount"
     [min]="0"
     mode="currency"
-    currency="USD"
+    currency="PKR"
+    locale="en-PK"
     styleClass="w-full sm:w-32"
   />
 </div>
 
           <div class="flex justify-between text-lg font-bold border-t pt-2">
             <span class="text-gray-800">Total Amount:</span>
-            <span class="text-green-600">{{ totalAmount() | currency:'USD':'symbol':'1.2-2' }}</span>
+            <span class="text-green-600">{{ totalAmount() | currency:'PKR':'symbol':'1.2-2' }}</span>
           </div>
 
           <div class="flex justify-between text-sm border-t pt-2">
             <span class="text-gray-600">Total Profit:</span>
-            <span class="font-medium text-green-600">{{ getTotalProfit() | currency:'USD':'symbol':'1.2-2' }}</span>
+            <span class="font-medium text-green-600">{{ getTotalProfit() | currency:'PKR':'symbol':'1.2-2' }}</span>
           </div>
         </div>
       </p-card>

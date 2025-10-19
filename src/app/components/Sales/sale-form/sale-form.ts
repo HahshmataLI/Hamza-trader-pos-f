@@ -140,7 +140,7 @@ export class SaleForm  implements OnInit {
     return this.customers().find(c => c._id === customerId);
   }
 
-  addItem(): void {
+addItem(): void {
     const item = this.newItem();
     if (!item.product || item.quantity <= 0 || item.unitSalePrice < 0) {
       this.messageService.add({
@@ -171,9 +171,9 @@ export class SaleForm  implements OnInit {
     }
 
     if (item.unitSalePrice < product.minSalePrice) {
-      const minPriceFormatted = new Intl.NumberFormat('en-US', {
+      const minPriceFormatted = new Intl.NumberFormat('en-PK', {
         style: 'currency',
-        currency: 'USD',
+        currency: 'PKR',
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       }).format(product.minSalePrice);
@@ -250,14 +250,14 @@ export class SaleForm  implements OnInit {
   }
 
   // Fix: Add missing updateItemPrice method
-  updateItemPrice(index: number, price: number): void {
+updateItemPrice(index: number, price: number): void {
     const currentItems = [...this.formData().items];
     const product = this.products().find(p => p._id === currentItems[index].product);
     
     if (product && price < product.minSalePrice) {
-      const minPriceFormatted = new Intl.NumberFormat('en-US', {
+      const minPriceFormatted = new Intl.NumberFormat('en-PK', {
         style: 'currency',
-        currency: 'USD',
+        currency: 'PKR',
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       }).format(product.minSalePrice);

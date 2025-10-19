@@ -30,7 +30,7 @@
         <div>
           <p class="text-sm font-medium text-green-900">Total Amount</p>
           <p class="text-2xl font-bold text-green-600">
-            {{ getTotalAmount() | currency:'USD':'symbol':'1.0-0' }}
+            {{ getTotalAmount() | currency:'PKR':'symbol':'1.0-0' }}
           </p>
         </div>
         <span class="text-green-600 text-xl">💰</span>
@@ -84,7 +84,7 @@
           <div class="text-center p-2 border rounded-lg bg-gray-50">
             <p class="text-sm font-medium text-gray-600">{{ stat._id }}</p>
             <p class="text-lg font-bold text-gray-900">{{ stat.count }}</p>
-            <p class="text-xs text-gray-500">{{ stat.totalAmount | currency:'USD':'symbol':'1.0-0' }}</p>
+            <p class="text-xs text-gray-500">{{ stat.totalAmount | currency:'PKR':'symbol':'1.0-0' }}</p>
           </div>
         }
       </div>
@@ -135,7 +135,7 @@
             </div>
           </td>
           <td class="font-semibold text-green-600">
-            {{ purchase.totalAmount | currency:'USD':'symbol':'1.2-2' }}
+            {{ purchase.totalAmount | currency:'PKR':'symbol':'1.2-2' }}
           </td>
           <td>
             <div class="text-sm">

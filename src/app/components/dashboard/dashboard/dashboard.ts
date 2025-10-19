@@ -167,11 +167,11 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR'
-    }).format(amount);
-  }
+  return new Intl.NumberFormat('en-PK', {
+    style: 'currency',
+    currency: 'PKR'
+  }).format(amount);
+}
 
   navigateTo(route: string) {
     this.router.navigate([route]);

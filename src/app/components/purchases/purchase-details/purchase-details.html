@@ -60,7 +60,7 @@
             </div>
             <div class="text-right">
               <p class="text-2xl font-bold text-green-600">
-                {{ purchase()!.totalAmount | currency:'USD':'symbol':'1.2-2' }}
+                {{ purchase()!.totalAmount | currency:'PKR':'symbol':'1.2-2' }}
               </p>
               <p class="text-sm text-gray-500">Total Amount</p>
             </div>
@@ -120,9 +120,9 @@
                   }
                 </td>
                 <td class="font-semibold">{{ item.quantity }}</td>
-                <td class="text-green-600">{{ item.unitCost | currency:'USD':'symbol':'1.2-2' }}</td>
+                <td class="text-green-600">{{ item.unitCost | currency:'PKR':'symbol':'1.2-2' }}</td>
                 <td class="font-semibold text-green-600">
-                  {{ item.total | currency:'USD':'symbol':'1.2-2' }}
+                  {{ item.total | currency:'PKR':'symbol':'1.2-2' }}
                 </td>
                 <td>
                   @if (getProduct(item)) {
@@ -140,7 +140,7 @@
               <tr>
                 <td colspan="3" class="text-right font-bold">Grand Total:</td>
                 <td colspan="2" class="font-bold text-green-600 text-lg">
-                  {{ purchase()!.totalAmount | currency:'USD':'symbol':'1.2-2' }}
+                  {{ purchase()!.totalAmount | currency:'PKR':'symbol':'1.2-2' }}
                 </td>
               </tr>
             </ng-template>
@@ -211,8 +211,6 @@
           </div>
         </p-card>
 
-        <!-- Timeline -->
-   <!-- Continue from where we left off in purchase details template -->
         <!-- Timeline -->
         <p-card header="Timeline">
           <div class="space-y-3">

@@ -108,12 +108,13 @@
 
           <!-- Unit Cost -->
           <div class="field">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Unit Cost ($)</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Unit Cost (Rs)</label>
             <p-inputNumber
               [(ngModel)]="newItem().unitCost"
               [min]="0"
               mode="currency"
-              currency="USD"
+              currency="PKR"
+              locale="en-PK"
               styleClass="w-full"
             />
           </div>
@@ -171,13 +172,14 @@
                     [(ngModel)]="formData().items[index].unitCost"
                     [min]="0"
                     mode="currency"
-                    currency="USD"
+                    currency="PKR"
+                    locale="en-PK"
                     styleClass="w-full"
                     (onInput)="updateItemUnitCost(index, formData().items[index].unitCost)"
                   />
                 </td>
                 <td class="font-semibold text-green-600">
-                  {{ getItemTotal(item) | currency:'USD':'symbol':'1.2-2' }}
+                  {{ getItemTotal(item) | currency:'PKR':'symbol':'1.2-2' }}
                 </td>
                 <td>
                   <p-button 
@@ -211,7 +213,7 @@
           </div>
           <div class="flex justify-between text-lg font-bold border-t pt-2">
             <span class="text-gray-800">Total Amount:</span>
-            <span class="text-green-600">{{ totalAmount() | currency:'USD':'symbol':'1.2-2' }}</span>
+            <span class="text-green-600">{{ totalAmount() | currency:'PKR':'symbol':'1.2-2' }}</span>
           </div>
         </div>
       </p-card>

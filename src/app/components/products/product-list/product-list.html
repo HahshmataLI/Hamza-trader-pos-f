@@ -1,6 +1,4 @@
-
-
-    <div class="space-y-6">
+<div class="space-y-6">
       <!-- Header -->
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -77,7 +75,7 @@
               <div>
                 <p class="text-sm font-medium text-green-900">Stock Value</p>
                 <p class="text-2xl font-bold text-green-600">
-                  {{ (summary().totalStockValue || 0) | currency:'USD':'symbol':'1.0-0' }}
+                  {{ (summary().totalStockValue || 0) | currency:'PKR':'symbol':'1.0-0' }}
                 </p>
               </div>
               <span class="text-green-600 text-xl">💰</span>
@@ -180,10 +178,10 @@
                 </div>
               </td>
               <td class="font-semibold text-green-600">
-                {{ product.costPrice | currency:'USD':'symbol':'1.2-2' }}
+                {{ product.costPrice | currency:'PKR':'symbol':'1.2-2' }}
               </td>
               <td class="font-semibold text-blue-600">
-                {{ product.mrp | currency:'USD':'symbol':'1.2-2' }}
+                {{ product.mrp | currency:'PKR':'symbol':'1.2-2' }}
               </td>
               <td>
                 <p-tag 

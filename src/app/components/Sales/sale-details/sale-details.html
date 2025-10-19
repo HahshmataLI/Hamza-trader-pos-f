@@ -36,7 +36,7 @@
           <div>
             <span class="font-medium">Total Amount:</span>
             <span class="text-green-600">{{
-              sale()!.totalAmount | currency : 'USD' : 'symbol' : '1.2-2'
+              sale()!.totalAmount | currency : 'PKR' : 'symbol' : '1.2-2'
             }}</span>
           </div>
           <div><span class="font-medium">Items:</span> {{ sale()!.items.length }}</div>
@@ -62,7 +62,7 @@
                   {{ getProduct(item) ? getProduct(item)!.name : 'Loading...' }}
                 </div>
                 <div class="text-xs text-gray-500">
-                  Sale Price: {{ item.unitSalePrice | currency : 'USD' : 'symbol' : '1.2-2' }}
+                  Sale Price: {{ item.unitSalePrice | currency : 'PKR' : 'symbol' : '1.2-2' }}
                 </div>
               </td>
               <td class="text-center">{{ item.quantity }}</td>
@@ -85,7 +85,7 @@
   </div>
 </td>
 <td class="text-green-600 font-semibold">
-  {{ (item.unitSalePrice * (getReturnItem(item._id!)?.quantity || 0)) | currency:'USD':'symbol':'1.2-2' }}
+  {{ (item.unitSalePrice * (getReturnItem(item._id!)?.quantity || 0)) | currency:'PKR':'symbol':'1.2-2' }}
 </td>
             </tr>
           </ng-template>
@@ -130,7 +130,7 @@
           <div class="flex justify-between text-lg font-bold border-t pt-2">
             <span class="text-gray-800">Total Refund:</span>
             <span class="text-green-600">{{
-              getTotalRefundAmount() | currency : 'USD' : 'symbol' : '1.2-2'
+              getTotalRefundAmount() | currency : 'PKR' : 'symbol' : '1.2-2'
             }}</span>
           </div>
         </div>
