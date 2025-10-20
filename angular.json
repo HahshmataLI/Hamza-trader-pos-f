@@ -16,23 +16,12 @@
     "browser": "src/main.ts",
     "tsConfig": "tsconfig.app.json",
     
-    "assets": [
-  {
-    "glob": "**/*",
-    "input": "public",
-    "output": "/"
-  },
-  {
-    "glob": "manifest.webmanifest",
-    "input": "src",
-    "output": "/"
-  },
-  {
-    "glob": "**/*",
-    "input": "src/assets",
-    "output": "/assets"
-  }
-],
+  "assets": [
+  "src/favicon.ico",
+  "src/assets",
+  "src/manifest.webmanifest"
+]
+,
     "styles": [
       "src/styles.css"
     ],
