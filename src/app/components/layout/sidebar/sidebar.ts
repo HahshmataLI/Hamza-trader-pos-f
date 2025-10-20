@@ -27,7 +27,7 @@ export class Sidebar {
 
   menuItems: MenuItem[] = [
     { label: 'Dashboard', icon: '📊', route: '/dashboard', roles: ['admin', 'manager'] },
-    { label: 'Point of Sale', icon: '💰', route: '/pos', roles: ['admin', 'manager', 'sales'] },
+    { label: 'Point of Sale', icon: '💰', route: '/sales/new', roles: ['admin', 'manager', 'sales'] },
     { label: 'Categories', icon: '📁', route: '/categories', roles: ['admin', 'manager'] },
     { label: 'Products', icon: '📦', route: '/products', roles: ['admin', 'manager'] },
     { label: 'Customers', icon: '👥', route: '/customers', roles: ['admin', 'manager', 'sales'] },
