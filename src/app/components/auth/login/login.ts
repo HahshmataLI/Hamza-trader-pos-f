@@ -29,7 +29,7 @@ export class Login {
     this.loginForm.markAllAsTouched();
     
     if (this.loginForm.valid) {
-      this.error.set('Wrong Credentials');
+      this.error.set('');
       
       this.authService.login(this.loginForm.value as any).subscribe({
         next: () => {
