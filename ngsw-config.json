@@ -6,14 +6,14 @@
       "name": "app",
       "installMode": "prefetch",
       "resources": {
-        "files": [
-          "/favicon.png",
+      "files": [
+          "/favicon.ico",
+          "/index.csr.html",
           "/index.html",
           "/manifest.webmanifest",
           "/*.css",
           "/*.js"
-        ],
-        "urls": ["/"]
+        ]
       }
     },
     {
@@ -22,25 +22,10 @@
       "updateMode": "prefetch",
       "resources": {
         "files": [
-          "/assets/**",
-          "/icons/**",
-          "/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"
+          "/**/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"
         ]
       }
     }
-  ],
-  "dataGroups": [
-    {
-      "name": "api-requests",
-      "urls": [
-        "https://hamza-trader-12399c3f50ff.herokuapp.com/api"
-      ],
-      "cacheConfig": {
-        "maxSize": 0,
-        "maxAge": "0u",
-        "timeout": "10s",
-        "strategy": "freshness"
-      }
-    }
   ]
+  
 }
