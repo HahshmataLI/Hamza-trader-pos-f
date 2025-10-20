@@ -17,9 +17,10 @@
     "tsConfig": "tsconfig.app.json",
     
     "assets": [
-       {
+  {
     "glob": "**/*",
-    "input": "public"
+    "input": "public",
+    "output": "/"
   },
   {
     "glob": "manifest.webmanifest",
@@ -31,7 +32,7 @@
     "input": "src/assets",
     "output": "/assets"
   }
-      ],
+],
     "styles": [
       "src/styles.css"
     ],
