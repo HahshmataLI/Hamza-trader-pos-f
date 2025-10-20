@@ -33,7 +33,7 @@
     {
       "name": "api-requests",
       "urls": [
-        "https://your-backend-domain.com/api/**"
+        "https://hamza-trader-12399c3f50ff.herokuapp.com/api"
       ],
       "cacheConfig": {
         "maxSize": 0,
