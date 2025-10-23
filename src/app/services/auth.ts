@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 
-import {  catchError, Observable, tap, throwError } from 'rxjs';
+import {   Observable, tap } from 'rxjs';
 import { LoginRequest, RegisterRequest,User } from '../interfaces/user.interface';
 import {  AuthResponse } from '../interfaces/auth-response.interface';
 import { Router } from '@angular/router';
@@ -41,13 +41,12 @@ export class AuthService  {
     this.isLoading.set(true);
     return this.http.post<AuthResponse>(`${API_URL}${AUTH_ENDPOINTS.REGISTER}`, userData)
       .pipe(
-        tap((response) => {
-          this.handleAuthSuccess(response);
-          this.isLoading.set(false);
-        }),
-        catchError((error: HttpErrorResponse) => {
-          this.isLoading.set(false);
-          return throwError(() => this.extractAuthErrorMessage(error));
+        tap({
+          next: (response) => {
+            this.handleAuthSuccess(response);
+            this.isLoading.set(false);
+          },
+          error: () => this.isLoading.set(false)
         })
       );
   }
@@ -56,43 +55,14 @@ export class AuthService  {
     this.isLoading.set(true);
     return this.http.post<AuthResponse>(`${API_URL}${AUTH_ENDPOINTS.LOGIN}`, credentials)
       .pipe(
-        tap((response) => {
-          this.handleAuthSuccess(response);
-          this.isLoading.set(false);
-        }),
-        catchError((error: HttpErrorResponse) => {
-          this.isLoading.set(false);
-          // Return a user-friendly error message
-          return throwError(() => this.extractAuthErrorMessage(error));
+        tap({
+          next: (response) => {
+            this.handleAuthSuccess(response);
+            this.isLoading.set(false);
+          },
+          error: () => this.isLoading.set(false)
         })
       );
-  }
-
-  private extractAuthErrorMessage(error: HttpErrorResponse): string {
-    console.log('Auth Error:', error); // For debugging
-    
-    if (error.status === 401) {
-      return 'Invalid email or password. Please check your credentials.';
-    }
-    
-    if (error.status === 0) {
-      return 'Unable to connect to server. Please check your internet connection.';
-    }
-    
-    if (error.status >= 500) {
-      return 'Server error. Please try again later.';
-    }
-    
-    // Try to extract specific error message from backend
-    if (error.error?.message) {
-      return error.error.message;
-    }
-    
-    if (typeof error.error === 'string') {
-      return error.error;
-    }
-    
-    return 'Login failed. Please try again.';
   }
 
   private handleAuthSuccess(response: AuthResponse): void {
