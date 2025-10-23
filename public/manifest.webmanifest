@@ -1,6 +1,6 @@
 {
-  "name": "my-pos-inventory",
-  "short_name": "my-pos-inventory",
+  "name": "Hamza Traders",
+  "short_name": "HT -POS ",
   "display": "standalone",
   "scope": "./",
   "start_url": "./",

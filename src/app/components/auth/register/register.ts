@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { UtilsModule } from '../../../utils.module';
 import { FormBuilder, Validators } from '@angular/forms';
 import { AuthService } from '../../../services/auth';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Select } from 'primeng/select';
 
 interface RoleOption {
@@ -12,7 +12,7 @@ interface RoleOption {
 
 @Component({
   selector: 'app-register',
-  imports: [UtilsModule , Select],
+  imports: [RouterLink,UtilsModule , Select],
   templateUrl: './register.html',
   styleUrl: './register.css',
   

@@ -3,6 +3,7 @@ import { UtilsModule } from '../../../utils.module';
 import { FormBuilder, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../services/auth';
+import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   selector: 'app-login',
@@ -35,7 +36,7 @@ export class Login {
         next: () => {
           this.router.navigate(['/dashboard']);
         },
-        error: (err) => {
+        error: (err: string) => { // Now err is a string from the service
           this.error.set(err);
         }
       });
