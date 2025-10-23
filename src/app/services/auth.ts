@@ -12,7 +12,7 @@ import { API_URL, AUTH_ENDPOINTS, ROLES, STORAGE_KEYS } from '../utils/constants
 @Injectable({
   providedIn: 'root'
 })
-export class AuthService  {
+export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
 
