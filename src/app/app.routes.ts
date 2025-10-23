@@ -17,110 +17,124 @@ export const routes: Routes = [
     loadComponent: () => import('./components/layout/main-layout/main-layout').then(c => c.MainLayout),
     canActivate: [authGuard],
     children: [
+      // Add default route for main layout
+      { 
+        path: '', 
+        redirectTo: 'dashboard', 
+        pathMatch: 'full' 
+      },
       { 
         path: 'dashboard', 
         loadComponent: () => import('./components/dashboard/dashboard/dashboard').then(c => c.Dashboard)
       },
+
+      // Categories - Fixed order
       { 
-  path: 'categories', 
-  loadComponent: () => import('./components/categories/category-list/category-list').then(c => c.CategoryList),
-  canActivate: [roleGuard],
-  data: { roles: ['admin', 'manager'] }
-},{ 
-path: 'categories/tree', 
-  loadComponent: () => import('./components/categories/category-tree/category-tree').then(c => c.CategoryTree),
-  canActivate: [roleGuard],
-  data: { roles: ['admin', 'manager'] }
-},
-{ 
-  path: 'categories/new', 
-  loadComponent: () => import('./components/categories/category-form/category-form').then(c => c.CategoryForm),
-  canActivate: [roleGuard],
-  data: { roles: ['admin', 'manager'] }
-},
-{ 
-  path: 'categories/:id/edit', 
-  loadComponent: () => import('./components/categories/category-form/category-form').then(c => c.CategoryForm),
-  canActivate: [roleGuard],
-  data: { roles: ['admin', 'manager'] }
-},
-{
-  path: 'products', 
-  loadComponent: () => import('./components/products/product-list/product-list').then(c => c.ProductList),
-  canActivate: [roleGuard],
-  data: { roles: ['admin', 'manager'] }
-},
-{
-  path: 'products/new', 
-  loadComponent: () => import('./components/products/product-form/product-form').then(c => c.ProductForm),
-  canActivate: [roleGuard],
-  data: { roles: ['admin', 'manager'] }
-},
-{
-  path: 'products/:id/edit', 
-  loadComponent: () => import('./components/products/product-form/product-form').then(c => c.ProductForm),
-  canActivate: [roleGuard],
-  data: { roles: ['admin', 'manager'] }
-},
-// Add to children array in main layout route
-{ 
-  path: 'suppliers', 
-  loadComponent: () => import('./components/supliers/supplier-list/supplier-list').then(c => c.SupplierList),
-  canActivate: [roleGuard],
-  data: { roles: ['admin', 'manager'] }
-},
-{ 
-  path: 'suppliers/new', 
-  loadComponent: () => import('./components/supliers/supplier-form/supplier-form').then(c => c.SupplierForm),
-  canActivate: [roleGuard],
-  data: { roles: ['admin', 'manager'] }
-},
-{ 
-  path: 'suppliers/:id/edit', 
-  loadComponent: () => import('./components/supliers/supplier-form/supplier-form').then(c => c.SupplierForm),
-  canActivate: [roleGuard],
-  data: { roles: ['admin', 'manager'] }
-},
-{ 
-  path: 'suppliers/:id', 
-  loadComponent: () => import('./components/supliers/supplier-details/supplier-details').then(c => c.SupplierDetails),
-  canActivate: [roleGuard],
-  data: { roles: ['admin', 'manager'] }
-},
-// Add to children array in main layout route
-{ 
-  path: 'purchases', 
-  loadComponent: () => import('./components/purchases/purchase-list/purchase-list').then(c => c.PurchaseList),
-  canActivate: [roleGuard],
-  data: { roles: ['admin', 'manager'] }
-},
-{ 
-  path: 'purchases/new', 
-  loadComponent: () => import('./components/purchases/purchase-form/purchase-form').then(c => c.PurchaseForm),
-  canActivate: [roleGuard],
-  data: { roles: ['admin', 'manager'] }
-},
-{ 
-  path: 'purchases/:id', 
-  loadComponent: () => import('./components/purchases/purchase-details/purchase-details').then(c => c.PurchaseDetails),
-  canActivate: [roleGuard],
-  data: { roles: ['admin', 'manager'] }
-},
-{ 
-  path: 'purchases/:id/edit', 
-  loadComponent: () => import('./components/purchases/purchase-form/purchase-form').then(c => c.PurchaseForm),
-  canActivate: [roleGuard],
-  data: { roles: ['admin', 'manager'] }
-},
-// Add to children array in main layout route
-   { 
-        path: 'customers', 
-        loadComponent: () => import('./components/customers/customer-list/customer-list').then(c => c.CustomerList),
+        path: 'categories/tree', 
+        loadComponent: () => import('./components/categories/category-tree/category-tree').then(c => c.CategoryTree),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager'] }
+      },
+      { 
+        path: 'categories/new', 
+        loadComponent: () => import('./components/categories/category-form/category-form').then(c => c.CategoryForm),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager'] }
+      },
+      { 
+        path: 'categories/:id/edit', 
+        loadComponent: () => import('./components/categories/category-form/category-form').then(c => c.CategoryForm),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager'] }
+      },
+      { 
+        path: 'categories', 
+        loadComponent: () => import('./components/categories/category-list/category-list').then(c => c.CategoryList),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager'] }
+      },
+
+      // Products - Fixed order
+      {
+        path: 'products/new', 
+        loadComponent: () => import('./components/products/product-form/product-form').then(c => c.ProductForm),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager'] }
+      },
+      {
+        path: 'products/:id/edit', 
+        loadComponent: () => import('./components/products/product-form/product-form').then(c => c.ProductForm),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager'] }
+      },
+      {
+        path: 'products', 
+        loadComponent: () => import('./components/products/product-list/product-list').then(c => c.ProductList),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager'] }
+      },
+
+      // Suppliers - Fixed order
+      { 
+        path: 'suppliers/new', 
+        loadComponent: () => import('./components/supliers/supplier-form/supplier-form').then(c => c.SupplierForm),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager'] }
+      },
+      { 
+        path: 'suppliers/:id/edit', 
+        loadComponent: () => import('./components/supliers/supplier-form/supplier-form').then(c => c.SupplierForm),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager'] }
+      },
+      { 
+        path: 'suppliers/:id', 
+        loadComponent: () => import('./components/supliers/supplier-details/supplier-details').then(c => c.SupplierDetails),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager'] }
+      },
+      { 
+        path: 'suppliers', 
+        loadComponent: () => import('./components/supliers/supplier-list/supplier-list').then(c => c.SupplierList),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager'] }
+      },
+
+      // Purchases - Fixed order
+      { 
+        path: 'purchases/new', 
+        loadComponent: () => import('./components/purchases/purchase-form/purchase-form').then(c => c.PurchaseForm),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager'] }
+      },
+      { 
+        path: 'purchases/:id/edit', 
+        loadComponent: () => import('./components/purchases/purchase-form/purchase-form').then(c => c.PurchaseForm),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager'] }
+      },
+      { 
+        path: 'purchases/:id', 
+        loadComponent: () => import('./components/purchases/purchase-details/purchase-details').then(c => c.PurchaseDetails),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager'] }
+      },
+      { 
+        path: 'purchases', 
+        loadComponent: () => import('./components/purchases/purchase-list/purchase-list').then(c => c.PurchaseList),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager'] }
+      },
+
+      // Customers - Fixed order
+      { 
+        path: 'customers/new', 
+        loadComponent: () => import('./components/customers/customer-form/customer-form').then(c => c.CustomerForm),
         canActivate: [roleGuard],
         data: { roles: ['admin', 'manager', 'sales'] }
       },
       { 
-        path: 'customers/new', 
+        path: 'customers/:id/edit', 
         loadComponent: () => import('./components/customers/customer-form/customer-form').then(c => c.CustomerForm),
         canActivate: [roleGuard],
         data: { roles: ['admin', 'manager', 'sales'] }
@@ -132,40 +146,40 @@ path: 'categories/tree',
         data: { roles: ['admin', 'manager', 'sales'] }
       },
       { 
-        path: 'customers/:id/edit', 
-        loadComponent: () => import('./components/customers/customer-form/customer-form').then(c => c.CustomerForm),
+        path: 'customers', 
+        loadComponent: () => import('./components/customers/customer-list/customer-list').then(c => c.CustomerList),
         canActivate: [roleGuard],
         data: { roles: ['admin', 'manager', 'sales'] }
       },
-      // Add to children array in main layout route
-{ 
-  path: 'sales', 
-  loadComponent: () => import('./components/Sales/sale-list/sale-list').then(c => c.SaleList),
-  canActivate: [roleGuard],
-  data: { roles: ['admin', 'manager', 'sales'] }
-},
-{ 
-  path: 'sales/new', 
-  loadComponent: () => import('./components/Sales/sale-form/sale-form').then(c => c.SaleForm),
-  canActivate: [roleGuard],
-  data: { roles: ['admin', 'manager', 'sales'] }
-},
-{ 
-  path: 'salesReturn/:id', 
-  loadComponent: () => import('./components/Sales/sale-details/sale-details').then(c => c.SaleDetails),
-  canActivate: [roleGuard],
-  data: { roles: ['admin', 'manager', 'sales'] }
-},
-{ 
-  path: 'sales/:id', 
-  loadComponent: () => import('./components/Sales/sales-details/sales-details').then(c => c.SalesDetails),
-  canActivate: [roleGuard],
-  data: { roles: ['admin', 'manager', 'sales'] }
-},
-      // We'll add more routes here as we build modules
+
+      // Sales - Fixed order (keeping your exact component paths)
+      { 
+        path: 'sales/new', 
+        loadComponent: () => import('./components/Sales/sale-form/sale-form').then(c => c.SaleForm),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager', 'sales'] }
+      },
+      { 
+        path: 'salesReturn/:id', 
+        loadComponent: () => import('./components/Sales/sale-details/sale-details').then(c => c.SaleDetails),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager', 'sales'] }
+      },
+      { 
+        path: 'sales/:id', 
+        loadComponent: () => import('./components/Sales/sales-details/sales-details').then(c => c.SalesDetails),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager', 'sales'] }
+      },
+      { 
+        path: 'sales', 
+        loadComponent: () => import('./components/Sales/sale-list/sale-list').then(c => c.SaleList),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'manager', 'sales'] }
+      }
     ]
   },
-  // Add to the children array in the main layout route
 
-   { path: '**', redirectTo: '/dashboard' }
+  // Wildcard route - must be last
+  { path: '**', redirectTo: '/dashboard' }
 ];
