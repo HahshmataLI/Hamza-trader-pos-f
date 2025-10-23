@@ -1,6 +1,6 @@
 // export const API_URL = 'http://localhost:5000/api';
 //  export const API_URL = 'https://hamza-trader-12399c3f50ff.herokuapp.com/api';
- export const API_URL = 'https://hamza-trader-pos-b.onrender.com//api';
+ export const API_URL = 'https://hamza-trader-pos-b.onrender.com/api';
 
 export const AUTH_ENDPOINTS = {
   LOGIN: '/auth/login',
