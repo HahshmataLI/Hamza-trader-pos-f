@@ -10,18 +10,25 @@
       "sourceRoot": "src",
       "prefix": "app",
       "architect": {
-       "build": {
+     "build": {
   "builder": "@angular/build:application",
   "options": {
     "browser": "src/main.ts",
     "tsConfig": "tsconfig.app.json",
-    
-  "assets": [
+   "assets": [
   "src/favicon.ico",
   "src/assets",
-  "src/manifest.webmanifest"
-]
-,
+  {
+    "glob": "manifest.webmanifest",
+    "input": "src",
+    "output": "/"
+  },
+  {
+    "glob": "ngsw-worker.js",
+    "input": "node_modules/@angular/service-worker",
+    "output": "/"
+  }
+],
     "styles": [
       "src/styles.css"
     ],
@@ -46,16 +53,15 @@
       ],
       "outputHashing": "all",
       "serviceWorker": "ngsw-config.json"
+    },
+    "development": {
+      "optimization": false,
+      "extractLicenses": false,
+      "sourceMap": true
     }
-,
-            "development": {
-              "optimization": false,
-              "extractLicenses": false,
-              "sourceMap": true
-            }
-          },
-          "defaultConfiguration": "production"
-        },
+  },
+  "defaultConfiguration": "production"
+},
         "serve": {
           "builder": "@angular/build:dev-server",
           "configurations": {
