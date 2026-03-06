@@ -1,0 +1,17 @@
+:host {
+  display: block;
+}
+
+/* Add any custom animations or styles */
+.transition-all {
+  transition: all 0.2s ease-in-out;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Image gallery hover effect */
+img.border-2:hover {
+  opacity: 0.8;
+}

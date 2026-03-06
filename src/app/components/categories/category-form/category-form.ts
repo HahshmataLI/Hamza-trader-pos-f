@@ -7,8 +7,8 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { AuthService } from '../../../services/auth';
 import { Category, CategoryAttribute, CreateCategoryRequest } from '../../../interfaces/category.interface';
 import { CommonModule } from '@angular/common';
-// import { Chips } from 'primeng/chips';
 import { ChipModule } from 'primeng/chip';
+
 interface CategoryOption {
   label: string;
   value: string;
@@ -19,16 +19,17 @@ interface AttributeTypeOption {
   label: string;
   value: 'text' | 'number' | 'select' | 'boolean';
 }
+
 @Component({
   selector: 'app-category-form',
   imports: [
-  UtilsModule,
-  CommonModule,
-  ReactiveFormsModule,
-  FormsModule,
-  RouterLink,
-  ChipModule
-],
+    UtilsModule,
+    CommonModule,
+    ReactiveFormsModule,
+    FormsModule,
+    RouterLink,
+    ChipModule
+  ],
   templateUrl: './category-form.html',
   styleUrl: './category-form.css',
   providers: [ConfirmationService, MessageService],
@@ -143,18 +144,6 @@ export class CategoryForm implements OnInit {
   }
 
   loadParentCategories(): void {
-    // For testing, create some dummy parent options
-    const dummyOptions: CategoryOption[] = [
-      { label: '📁 Electronics (Level 1)', value: 'cat1', level: 1 },
-      { label: '📁 Clothing (Level 1)', value: 'cat2', level: 1 },
-      { label: '📂 — Smartphones (Level 2)', value: 'cat3', level: 2 },
-      { label: '📂 — Laptops (Level 2)', value: 'cat4', level: 2 }
-    ];
-    
-    this.parentOptions.set(dummyOptions);
-
-    // Uncomment when your service is ready:
-    
     this.categoryService.getCategories().subscribe({
       next: (response) => {
         const options: CategoryOption[] = [];
@@ -179,7 +168,6 @@ export class CategoryForm implements OnInit {
         console.error('Failed to load parent categories', error);
       }
     });
-   
   }
 
   addAttribute(attribute?: CategoryAttribute): void {
@@ -190,8 +178,7 @@ export class CategoryForm implements OnInit {
       required: [attribute?.required || false],
       options: [attribute?.options || []],
       min: [attribute?.validation?.min || null],
-      max: [attribute?.validation?.max || null],
-      pattern: [attribute?.validation?.pattern || '']
+      max: [attribute?.validation?.max || null]
     });
 
     // Add validation for select options
@@ -241,7 +228,6 @@ export class CategoryForm implements OnInit {
     this.categoryForm.markAsDirty();
   }
 
-  // New methods for chip-based options management
   addOption(attributeIndex: number, inputElement: HTMLInputElement): void {
     const value = inputElement.value.trim();
     if (value) {
@@ -355,11 +341,10 @@ export class CategoryForm implements OnInit {
           attributeData.options = attr.options;
         }
 
-        // Add validation rules if any are provided
+        // Add validation rules if any are provided (only min/max, no pattern)
         const validation: any = {};
         if (attr.min !== null && attr.min !== '' && !isNaN(attr.min)) validation.min = Number(attr.min);
         if (attr.max !== null && attr.max !== '' && !isNaN(attr.max)) validation.max = Number(attr.max);
-        if (attr.pattern && attr.pattern.trim() !== '') validation.pattern = attr.pattern;
 
         if (Object.keys(validation).length > 0) {
           attributeData.validation = validation;
@@ -383,16 +368,6 @@ export class CategoryForm implements OnInit {
 
       console.log('Final category data:', categoryData);
 
-      // For testing - just show success message
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `Category ${this.isEditMode() ? 'updated' : 'created'} successfully`
-      });
-      this.loading.set(false);
-      
-      // Uncomment when your service is ready:
-      
       const request = this.isEditMode() 
         ? this.categoryService.updateCategory(this.categoryId()!, categoryData)
         : this.categoryService.createCategory(categoryData);

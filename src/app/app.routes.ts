@@ -55,24 +55,31 @@ export const routes: Routes = [
       },
 
       // Products - Fixed order
-      {
-        path: 'products/new', 
-        loadComponent: () => import('./components/products/product-form/product-form').then(c => c.ProductForm),
-        canActivate: [roleGuard],
-        data: { roles: ['admin', 'manager'] }
-      },
-      {
-        path: 'products/:id/edit', 
-        loadComponent: () => import('./components/products/product-form/product-form').then(c => c.ProductForm),
-        canActivate: [roleGuard],
-        data: { roles: ['admin', 'manager'] }
-      },
-      {
-        path: 'products', 
-        loadComponent: () => import('./components/products/product-list/product-list').then(c => c.ProductList),
-        canActivate: [roleGuard],
-        data: { roles: ['admin', 'manager'] }
-      },
+    // Products - Complete section with all routes
+{
+  path: 'products/new', 
+  loadComponent: () => import('./components/products/product-form/product-form').then(c => c.ProductForm),
+  canActivate: [roleGuard],
+  data: { roles: ['admin', 'manager'] }
+},
+{
+  path: 'products/:id', 
+  loadComponent: () => import('./components/products/product-details/product-details').then(c => c.ProductDetails),
+  canActivate: [roleGuard],
+  data: { roles: ['admin', 'manager', 'sales'] }
+},
+{
+  path: 'products/:id/edit', 
+  loadComponent: () => import('./components/products/product-form/product-form').then(c => c.ProductForm),
+  canActivate: [roleGuard],
+  data: { roles: ['admin', 'manager'] }
+},
+{
+  path: 'products', 
+  loadComponent: () => import('./components/products/product-list/product-list').then(c => c.ProductList),
+  canActivate: [roleGuard],
+  data: { roles: ['admin', 'manager', 'sales'] }
+},
 
       // Suppliers - Fixed order
       { 

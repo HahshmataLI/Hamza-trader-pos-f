@@ -1,0 +1,235 @@
+<div class="space-y-6">
+  <!-- Header with Back Button -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div class="flex items-center space-x-4">
+      <p-button 
+        icon="pi pi-arrow-left" 
+        [text]="true" 
+        [rounded]="true"
+        (onClick)="goBack()"
+      />
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Product Details</h1>
+        <p class="text-gray-600">View complete product information</p>
+      </div>
+    </div>
+    <div class="flex space-x-2">
+      <p-button 
+        *ngIf="authService.hasAnyRole(['admin', 'manager'])"
+        label="Edit" 
+        icon="pi pi-pencil" 
+        severity="secondary"
+        [routerLink]="['/products', productId, 'edit']"
+      />
+      <p-button 
+        label="Back to List" 
+        icon="pi pi-list" 
+        severity="info" 
+        [text]="true"
+        [routerLink]="['/products']"
+      />
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="flex justify-center items-center py-12">
+      <p-progressSpinner />
+    </div>
+  }
+
+  <!-- Product Details -->
+  @if (!loading() && product(); as product) {
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Left Column - Images -->
+      <div class="lg:col-span-1">
+        <p-card header="Product Images">
+          <div class="space-y-4">
+            <!-- Main Image -->
+            @if (product.images && product.images.length > 0) {
+              <div class="relative">
+                <img 
+                  [src]="selectedImage || product.images[0]" 
+                  [alt]="product.name"
+                  class="w-full h-64 object-cover rounded-lg border border-gray-200"
+                />
+              </div>
+              
+              <!-- Thumbnail Gallery -->
+              @if (product.images.length > 1) {
+                <div class="grid grid-cols-4 gap-2">
+                  @for (image of product.images; track image) {
+                    <img 
+                      [src]="image" 
+                      [alt]="product.name"
+                      class="w-full h-16 object-cover rounded-lg border-2 cursor-pointer transition-all"
+                      [class.border-blue-500]="selectedImage === image"
+                      [class.border-gray-200]="selectedImage !== image"
+                      (click)="selectedImage = image"
+                    />
+                  }
+                </div>
+              }
+            } @else {
+              <div class="w-full h-64 bg-gray-100 rounded-lg flex flex-col items-center justify-center">
+                <span class="text-gray-400 text-6xl mb-2">📷</span>
+                <p class="text-gray-500">No images available</p>
+              </div>
+            }
+          </div>
+        </p-card>
+      </div>
+
+      <!-- Right Column - Product Info -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Basic Information -->
+        <p-card>
+          <div class="space-y-4">
+            <div class="flex justify-between items-start">
+              <div>
+                <h2 class="text-2xl font-bold text-gray-900">{{ product.name }}</h2>
+                <div class="flex items-center space-x-2 mt-1">
+                  <p-tag 
+                    [value]="product.isActive ? 'Active' : 'Inactive'" 
+                    [severity]="product.isActive ? 'success' : 'danger'" 
+                  />
+                  <span class="text-sm text-gray-500">SKU: {{ product.sku }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
+              <div>
+                <p class="text-sm text-gray-500">Category</p>
+                <p class="font-semibold">{{ getCategoryName(product) }}</p>
+              </div>
+              <div>
+                <p class="text-sm text-gray-500">Barcode</p>
+                <p class="font-mono text-sm">{{ product.barcode || 'N/A' }}</p>
+              </div>
+              <div>
+                <p class="text-sm text-gray-500">Created</p>
+                <p class="font-semibold">{{ product.createdAt | date:'mediumDate' }}</p>
+              </div>
+              <div>
+                <p class="text-sm text-gray-500">Last Updated</p>
+                <p class="font-semibold">{{ product.updatedAt | date:'mediumDate' }}</p>
+              </div>
+            </div>
+          </div>
+        </p-card>
+
+        <!-- Stock Information -->
+        <p-card header="Stock Information">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <p class="text-sm text-gray-500">Current Stock</p>
+              <p class="text-2xl font-bold" 
+                [class.text-green-600]="product.stock > product.minStockLevel"
+                [class.text-orange-600]="product.stock > 0 && product.stock <= product.minStockLevel"
+                [class.text-red-600]="product.stock === 0">
+                {{ product.stock }} units
+              </p>
+              @if (product.stock <= product.minStockLevel) {
+                <p-tag 
+                  [value]="product.stock === 0 ? 'Out of Stock' : 'Low Stock'"
+                  [severity]="product.stock === 0 ? 'danger' : 'warn'"
+                  styleClass="mt-2"
+                />
+              }
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <p class="text-sm text-gray-500">Min Stock Level</p>
+              <p class="text-2xl font-bold text-gray-700">{{ product.minStockLevel }} units</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <p class="text-sm text-gray-500">Stock Value</p>
+              <p class="text-2xl font-bold text-green-600">
+                {{ (product.stock * product.costPrice) | currency:'PKR':'symbol':'1.0-0' }}
+              </p>
+            </div>
+          </div>
+        </p-card>
+
+        <!-- Pricing Information -->
+        <p-card header="Pricing">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <p class="text-sm text-gray-500">Cost Price</p>
+              <p class="text-2xl font-bold text-green-600">
+                {{ product.costPrice | currency:'PKR':'symbol':'1.2-2' }}
+              </p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <p class="text-sm text-gray-500">MRP (Retail Price)</p>
+              <p class="text-2xl font-bold text-blue-600">
+                {{ product.mrp | currency:'PKR':'symbol':'1.2-2' }}
+              </p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <p class="text-sm text-gray-500">Min Sale Price</p>
+              <p class="text-2xl font-bold text-orange-600">
+                {{ product.minSalePrice | currency:'PKR':'symbol':'1.2-2' }}
+              </p>
+            </div>
+          </div>
+          
+          <!-- Profit Margin -->
+          <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-medium text-blue-900">Profit Margin (MRP - Cost)</span>
+              <span class="text-xl font-bold text-blue-600">
+                {{ (product.mrp - product.costPrice) | currency:'PKR':'symbol':'1.2-2' }}
+              </span>
+            </div>
+            <div class="flex justify-between items-center mt-2">
+              <span class="text-sm font-medium text-blue-900">Margin Percentage</span>
+              <span class="text-xl font-bold text-blue-600">
+                {{ calculateMarginPercentage(product.costPrice, product.mrp) }}%
+              </span>
+            </div>
+          </div>
+        </p-card>
+
+        <!-- Description -->
+        @if (product.description) {
+          <p-card header="Description">
+            <p class="text-gray-700 whitespace-pre-line">{{ product.description }}</p>
+          </p-card>
+        }
+
+        <!-- Attributes -->
+      @if (hasAttributes(product)) {
+  <p-card header="Product Attributes">
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+      @for (item of getAttributesList(product); track item.key) {
+        <div class="bg-gray-50 p-3 rounded-lg">
+          <p class="text-sm text-gray-500 capitalize">{{ item.key }}</p>
+          <p class="font-semibold">{{ item.value }}</p>
+        </div>
+      }
+    </div>
+  </p-card>
+}
+      </div>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (!loading() && !product()) {
+    <p-card>
+      <div class="text-center py-12">
+        <span class="text-gray-400 text-6xl mb-4 block">🔍</span>
+        <h3 class="text-xl font-semibold text-gray-700 mb-2">Product Not Found</h3>
+        <p class="text-gray-500 mb-6">The product you're looking for doesn't exist or has been removed.</p>
+        <p-button 
+          label="Back to Products" 
+          icon="pi pi-arrow-left" 
+          [routerLink]="['/products']"
+        />
+      </div>
+    </p-card>
+  }
+</div>
+
+<p-toast />

@@ -1,173 +1,208 @@
- <div class="space-y-6">
-      <!-- Header Section -->
-      <div class="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-6 text-white">
-        <div class="flex items-center justify-between">
-          <div>
-            <h1 class="text-2xl font-bold mb-2">
-              {{ isEditMode() ? 'Edit Category' : 'Create New Category' }}
-            </h1>
-            <p class="text-blue-100">
-              {{ isEditMode() ? 'Update your category details and attributes' : 'Organize your products with hierarchical categories' }}
-            </p>
-          </div>
-          <div class="w-16 h-16 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center">
-            <span class="text-2xl">🏷️</span>
-          </div>
-        </div>
+<div class="space-y-6">
+  <!-- Header Section -->
+  <div class="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-6 text-white">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold mb-2">
+          {{ isEditMode() ? 'Edit Category' : 'Create New Category' }}
+        </h1>
+        <p class="text-blue-100">
+          {{ isEditMode() ? 'Update your category details and attributes' : 'Organize your products with hierarchical categories' }}
+        </p>
       </div>
+      <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+        <span class="text-4xl">🏷️</span>
+      </div>
+    </div>
+  </div>
 
-      <!-- Main Form -->
-      <form [formGroup]="categoryForm" (ngSubmit)="onSubmit()">
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          <!-- Main Form Content -->
-          <div class="xl:col-span-2 space-y-6">
-            <!-- Basic Information Card -->
-            <p-card header="Basic Information" class="shadow-lg border-0">
-              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Category Name -->
-                <div class="space-y-3">
-                  <label class="block text-sm font-semibold text-gray-700">
-                    Category Name <span class="text-red-500">*</span>
-                  </label>
+  <!-- Main Form -->
+  <form [formGroup]="categoryForm" (ngSubmit)="onSubmit()">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Main Form Content -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Basic Information Card -->
+        <p-card styleClass="shadow-lg border-0 rounded-xl">
+          <ng-template pTemplate="header">
+            <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+              <h3 class="text-lg font-semibold text-gray-800">Basic Information</h3>
+            </div>
+          </ng-template>
+          
+          <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Category Name -->
+              <div class="space-y-2">
+                <label class="block text-sm font-semibold text-gray-700">
+                  Category Name <span class="text-red-500">*</span>
+                </label>
+                <span class="p-input-icon-left w-full">
+                  <i class="pi pi-tag"></i>
                   <input 
                     type="text" 
                     pInputText 
                     formControlName="name"
                     placeholder="e.g., Electronics, Clothing, Food"
-                    class="w-full"
-                    [class]="categoryForm.get('name')?.invalid && (categoryForm.get('name')?.touched || categoryForm.get('name')?.dirty) ? 'ng-invalid ng-dirty' : ''"
+                    class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    [class.border-red-500]="categoryForm.get('name')?.invalid && (categoryForm.get('name')?.touched || categoryForm.get('name')?.dirty)"
                   />
-                  @if (categoryForm.get('name')?.invalid && (categoryForm.get('name')?.touched || categoryForm.get('name')?.dirty)) {
-                    <small class="text-red-500 block text-sm mt-1">
-                      @if (categoryForm.get('name')?.errors?.['required']) {
-                        Category name is required
-                      }
-                      @if (categoryForm.get('name')?.errors?.['minlength']) {
-                        Name must be at least 2 characters
-                      }
-                    </small>
-                  }
-                </div>
-
-                <!-- Parent Category -->
-                <div class="space-y-3">
-                  <label class="block text-sm font-semibold text-gray-700">Parent Category</label>
-                  <p-select
-                    formControlName="parent"
-                    [options]="parentOptions()"
-                    placeholder="Select parent category"
-                    class="w-full"
-                    [showClear]="true"
-                    [filter]="true"
-                    optionLabel="label"
-                    optionValue="value"
-                    (onChange)="onParentChange()"
-                  >
-                    <ng-template pTemplate="item" let-category>
-                      <div class="flex items-center gap-3 py-2">
-                        <span class="text-lg">
-                          @switch (category.level) {
-                            @case (1) { 📁 }
-                            @case (2) { 📂 }
-                            @case (3) { 📄 }
-                          }
-                        </span>
-                        <span class="text-gray-700">{{ category.label }}</span>
-                      </div>
-                    </ng-template>
-                  </p-select>
-                  <small class="text-gray-500 block text-sm">
-                    Leave empty to create a main category
+                </span>
+                @if (categoryForm.get('name')?.invalid && (categoryForm.get('name')?.touched || categoryForm.get('name')?.dirty)) {
+                  <small class="text-red-500 block text-sm">
+                    @if (categoryForm.get('name')?.errors?.['required']) {
+                      Category name is required
+                    }
+                    @if (categoryForm.get('name')?.errors?.['minlength']) {
+                      Name must be at least 2 characters
+                    }
                   </small>
-                </div>
+                }
+              </div>
 
-                <!-- Description -->
-                <div class="lg:col-span-2 space-y-3">
-                  <label class="block text-sm font-semibold text-gray-700">Description</label>
-                  <textarea 
-                    pTextarea 
-                    formControlName="description"
-                    placeholder="Describe this category and its purpose..."
-                    [rows]="4"
-                    class="w-full resize-none"
-                  ></textarea>
-                </div>
-
-                <!-- Status -->
-                <div class="lg:col-span-2 space-y-3">
-                  <label class="block text-sm font-semibold text-gray-700">Status</label>
-                  <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-                    <p-inputSwitch 
-                      formControlName="isActive" 
-                      (onChange)="onStatusChange($event)"
-                    />
-                    <div>
-                      <p class="font-medium text-gray-900">
-                        {{ categoryForm.get('isActive')?.value ? 'Active' : 'Inactive' }}
-                      </p>
-                      <p class="text-sm text-gray-600">
-                        {{ categoryForm.get('isActive')?.value ? 
-                          'This category is visible and can be used' : 
-                          'This category is hidden from users' }}
-                      </p>
+              <!-- Parent Category -->
+              <div class="space-y-2">
+                <label class="block text-sm font-semibold text-gray-700">Parent Category</label>
+                <p-select
+                  formControlName="parent"
+                  [options]="parentOptions()"
+                  placeholder="Select parent category"
+                  [showClear]="true"
+                  [filter]="true"
+                  optionLabel="label"
+                  optionValue="value"
+                  (onChange)="onParentChange()"
+                  styleClass="w-full"
+                  [style]="{'width':'100%'}"
+                >
+                  <ng-template pTemplate="selectedItem" let-category>
+                    <div class="flex items-center gap-2" *ngIf="category">
+                      <span>
+                        @switch (category.level) {
+                          @case (1) { 📁 }
+                          @case (2) { 📂 }
+                          @case (3) { 📄 }
+                        }
+                      </span>
+                      <span>{{ category.label }}</span>
                     </div>
+                  </ng-template>
+                  <ng-template pTemplate="item" let-category>
+                    <div class="flex items-center gap-3 py-2">
+                      <span class="text-lg">
+                        @switch (category.level) {
+                          @case (1) { 📁 }
+                          @case (2) { 📂 }
+                          @case (3) { 📄 }
+                        }
+                      </span>
+                      <span class="text-gray-700">{{ category.label }}</span>
+                    </div>
+                  </ng-template>
+                </p-select>
+                <small class="text-gray-500 block">
+                  Leave empty to create a main category
+                </small>
+              </div>
+
+              <!-- Description -->
+              <div class="md:col-span-2 space-y-2">
+                <label class="block text-sm font-semibold text-gray-700">Description</label>
+                <textarea 
+                  pTextarea 
+                  formControlName="description"
+                  placeholder="Describe this category and its purpose..."
+                  [rows]="4"
+                  class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                ></textarea>
+              </div>
+
+              <!-- Status -->
+              <div class="md:col-span-2 space-y-2">
+                <label class="block text-sm font-semibold text-gray-700">Status</label>
+                <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <p-inputSwitch 
+                    formControlName="isActive" 
+                    (onChange)="onStatusChange($event)"
+                  />
+                  <div>
+                    <p class="font-medium text-gray-900">
+                      {{ categoryForm.get('isActive')?.value ? 'Active' : 'Inactive' }}
+                    </p>
+                    <p class="text-sm text-gray-600">
+                      {{ categoryForm.get('isActive')?.value ? 
+                        'This category is visible and can be used' : 
+                        'This category is hidden from users' }}
+                    </p>
                   </div>
                 </div>
               </div>
-            </p-card>
+            </div>
+          </div>
+        </p-card>
 
-            <!-- Attributes Section -->
-            <p-card header="Custom Attributes" class="shadow-lg border-0">
-              <div class="space-y-4">
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div class="flex items-start space-x-3">
-                    <span class="text-blue-600 text-lg mt-1">💡</span>
-                    <div>
-                      <p class="font-medium text-blue-900">Attribute Templates</p>
-                      <p class="text-sm text-blue-700 mt-1">
-                        Define custom fields for products in this category. These attributes will be inherited by subcategories.
-                      </p>
-                    </div>
+        <!-- Attributes Section -->
+        <p-card styleClass="shadow-lg border-0 rounded-xl">
+          <ng-template pTemplate="header">
+            <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+              <h3 class="text-lg font-semibold text-gray-800">Custom Attributes</h3>
+            </div>
+          </ng-template>
+          
+          <div class="p-6">
+            <div class="space-y-4">
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-start gap-3">
+                  <span class="text-blue-600 text-xl mt-1">💡</span>
+                  <div>
+                    <p class="font-medium text-blue-900">Attribute Templates</p>
+                    <p class="text-sm text-blue-700 mt-1">
+                      Define custom fields for products in this category. These attributes will be inherited by subcategories.
+                    </p>
                   </div>
                 </div>
+              </div>
 
-                <!-- Attributes List -->
-                <div formArrayName="attributes" class="space-y-4">
-                  @for (attribute of attributes.controls; track $index; let i = $index) {
-                    <div [formGroupName]="i" class="border border-gray-200 rounded-xl p-6 bg-white hover:shadow-md transition-shadow">
-                      <div class="flex justify-between items-center mb-4">
-                        <div class="flex items-center space-x-3">
-                          <div class="w-8 h-8 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                            <span class="text-white text-sm font-bold">{{ i + 1 }}</span>
-                          </div>
-                          <h4 class="font-semibold text-gray-900">Attribute {{ i + 1 }}</h4>
+              <!-- Attributes List -->
+              <div formArrayName="attributes" class="space-y-4">
+                @for (attribute of attributes.controls; track $index; let i = $index) {
+                  <div [formGroupName]="i" class="border border-gray-200 rounded-xl bg-white hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+                      <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                          <span class="text-white text-sm font-bold">{{ i + 1 }}</span>
                         </div>
-                        <button 
-                          type="button"
-                          pButton 
-                          icon="pi pi-times" 
-                          severity="danger" 
-                          [text]="true" 
-                          [rounded]="true"
-                          class="w-8 h-8"
-                          (click)="removeAttribute(i)"
-                          [disabled]="attributes.length === 1"
-                        ></button>
+                        <h4 class="font-semibold text-gray-900">Attribute {{ i + 1 }}</h4>
                       </div>
+                      <button 
+                        type="button"
+                        pButton 
+                        icon="pi pi-trash" 
+                        severity="danger" 
+                        [text]="true" 
+                        [rounded]="true"
+                        (click)="removeAttribute(i)"
+                        [disabled]="attributes.length === 1"
+                      ></button>
+                    </div>
 
-                      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="p-6">
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Field Name -->
                         <div class="space-y-2">
                           <label class="block text-sm font-medium text-gray-700">
                             Field Name <span class="text-red-500">*</span>
                           </label>
-                          <input 
-                            type="text" 
-                            pInputText 
-                            formControlName="name"
-                            placeholder="e.g., size, brand, color"
-                            class="w-full"
-                          />
+                          <span class="p-input-icon-left w-full">
+                            <i class="pi pi-pencil"></i>
+                            <input 
+                              type="text" 
+                              pInputText 
+                              formControlName="name"
+                              placeholder="e.g., size, brand, color"
+                              class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              [class.border-red-500]="attribute.get('name')?.invalid && (attribute.get('name')?.touched || attribute.get('name')?.dirty)"
+                            />
+                          </span>
                           @if (attribute.get('name')?.invalid && (attribute.get('name')?.touched || attribute.get('name')?.dirty)) {
                             <small class="text-red-500 block text-sm">
                               Field name is required
@@ -180,13 +215,17 @@
                           <label class="block text-sm font-medium text-gray-700">
                             Display Label <span class="text-red-500">*</span>
                           </label>
-                          <input 
-                            type="text" 
-                            pInputText 
-                            formControlName="label"
-                            placeholder="e.g., Shoe Size, Brand Name"
-                            class="w-full"
-                          />
+                          <span class="p-input-icon-left w-full">
+                            <i class="pi pi-tag"></i>
+                            <input 
+                              type="text" 
+                              pInputText 
+                              formControlName="label"
+                              placeholder="e.g., Shoe Size, Brand Name"
+                              class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              [class.border-red-500]="attribute.get('label')?.invalid && (attribute.get('label')?.touched || attribute.get('label')?.dirty)"
+                            />
+                          </span>
                           @if (attribute.get('label')?.invalid && (attribute.get('label')?.touched || attribute.get('label')?.dirty)) {
                             <small class="text-red-500 block text-sm">
                               Display label is required
@@ -203,11 +242,26 @@
                             formControlName="type"
                             [options]="attributeTypes"
                             placeholder="Select field type"
-                            class="w-full"
                             optionLabel="label"
                             optionValue="value"
                             (onChange)="onAttributeTypeChange(i)"
-                          />
+                            styleClass="w-full"
+                            [style]="{'width':'100%'}"
+                          >
+                            <ng-template pTemplate="item" let-type>
+                              <div class="flex items-center gap-2 py-2">
+                                <span>
+                                  @switch (type.value) {
+                                    @case ('text') { 📝 }
+                                    @case ('number') { 🔢 }
+                                    @case ('select') { 📋 }
+                                    @case ('boolean') { ✅ }
+                                  }
+                                </span>
+                                <span>{{ type.label }}</span>
+                              </div>
+                            </ng-template>
+                          </p-select>
                           @if (attribute.get('type')?.invalid && (attribute.get('type')?.touched || attribute.get('type')?.dirty)) {
                             <small class="text-red-500 block text-sm">
                               Field type is required
@@ -218,7 +272,7 @@
                         <!-- Required -->
                         <div class="space-y-2">
                           <label class="block text-sm font-medium text-gray-700">Required Field</label>
-                          <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                          <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                             <p-inputSwitch 
                               formControlName="required" 
                               (onChange)="onRequiredChange(i, $event)"
@@ -231,24 +285,23 @@
 
                         <!-- Options for Select Type -->
                         @if (getAttributeType(i) === 'select') {
-                          <div class="lg:col-span-2 space-y-2">
+                          <div class="md:col-span-2 space-y-2">
                             <label class="block text-sm font-medium text-gray-700">
                               Options <span class="text-red-500">*</span>
                             </label>
-                            <div class="flex flex-wrap gap-2 p-2 border border-gray-300 rounded-lg min-h-[42px]">
+                            <div class="flex flex-wrap gap-2 p-3 border border-gray-300 rounded-lg min-h-[48px] bg-white">
                               @for (option of attribute.get('options')?.value; track $index; let optionIndex = $index) {
-                                <p-chip 
-                                  [label]="option" 
-                                  [removable]="true"
-                                  (onRemove)="removeOption(i, optionIndex)"
-                                />
+                                <span class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                                  {{ option }}
+                                  <i class="pi pi-times cursor-pointer hover:text-blue-600" (click)="removeOption(i, optionIndex)"></i>
+                                </span>
                               }
                               <input 
                                 type="text" 
                                 pInputText 
                                 #optionInput
                                 placeholder="Add option (press Enter)"
-                                class="border-0 flex-1 min-w-[150px] focus:ring-0 focus:outline-none"
+                                class="border-0 flex-1 min-w-[150px] focus:ring-0 focus:outline-none p-1"
                                 (keydown.enter)="addOption(i, optionInput); $event.preventDefault()"
                               />
                             </div>
@@ -264,179 +317,198 @@
                         }
 
                         <!-- Validation Rules -->
-                        <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
-                          <div class="space-y-2">
-                            <label class="block text-sm font-medium text-gray-700">Min Value</label>
-                            <input 
-                              type="number" 
-                              pInputText 
-                              formControlName="min"
-                              placeholder="Minimum value"
-                              class="w-full"
-                            />
+                        @if (getAttributeType(i) === 'number') {
+                          <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+                            <div class="space-y-2">
+                              <label class="block text-sm font-medium text-gray-700">Min Value</label>
+                              <input 
+                                type="number" 
+                                pInputText 
+                                formControlName="min"
+                                placeholder="Minimum value"
+                                class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </div>
+                            <div class="space-y-2">
+                              <label class="block text-sm font-medium text-gray-700">Max Value</label>
+                              <input 
+                                type="number" 
+                                pInputText 
+                                formControlName="max"
+                                placeholder="Maximum value"
+                                class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </div>
                           </div>
-                          <div class="space-y-2">
-                            <label class="block text-sm font-medium text-gray-700">Max Value</label>
-                            <input 
-                              type="number" 
-                              pInputText 
-                              formControlName="max"
-                              placeholder="Maximum value"
-                              class="w-full"
-                            />
-                          </div>
-                          <div class="space-y-2">
-                            <label class="block text-sm font-medium text-gray-700">Pattern</label>
-                            <input 
-                              type="text" 
-                              pInputText 
-                              formControlName="pattern"
-                              placeholder="Regex pattern"
-                              class="w-full"
-                            />
-                          </div>
-                        </div>
+                        }
                       </div>
                     </div>
-                  }
-                </div>
-
-                <!-- Add Attribute Button -->
-                <button 
-                  type="button"
-                  pButton 
-                  label="Add New Attribute" 
-                  icon="pi pi-plus" 
-                  severity="secondary"
-                  [outlined]="true"
-                  styleClass="w-full"
-                  (click)="addAttribute()"
-                ></button>
-              </div>
-            </p-card>
-          </div>
-
-          <!-- Sidebar -->
-          <div class="space-y-6">
-            <!-- Category Level Info -->
-            <p-card header="Category Level" class="shadow-lg border-0">
-              <div class="space-y-4">
-                <div class="text-center p-4 bg-gradient-to-r from-green-500 to-green-600 rounded-xl text-white">
-                  <div class="text-3xl mb-2">
-                    @switch (getLevelInfo().level) {
-                      @case (1) { 📁 }
-                      @case (2) { 📂 }
-                      @case (3) { 📄 }
-                    }
                   </div>
-                  <h3 class="font-bold text-lg">{{ getLevelInfo().label }}</h3>
-                  <p class="text-green-100 text-sm mt-1">{{ getLevelInfo().description }}</p>
-                </div>
-                
-                <div class="space-y-3 text-sm">
-                  <div class="flex justify-between items-center py-2 border-b border-gray-200">
-                    <span class="text-gray-600">Maximum Depth</span>
-                    <span class="font-semibold">3 Levels</span>
-                  </div>
-                  <div class="flex justify-between items-center py-2 border-b border-gray-200">
-                    <span class="text-gray-600">Inheritance</span>
-                    <span class="font-semibold">Yes</span>
-                  </div>
-                  <div class="flex justify-between items-center py-2">
-                    <span class="text-gray-600">Attribute Templates</span>
-                    <span class="font-semibold">{{ attributes.length }}</span>
-                  </div>
-                </div>
-              </div>
-            </p-card>
-
-            <!-- Form Actions -->
-            <p-card header="Actions" class="shadow-lg border-0 sticky top-6">
-              <div class="space-y-3">
-                <button 
-                  type="submit"
-                  pButton 
-                  label="{{ isEditMode() ? 'Update Category' : 'Create Category' }}" 
-                  icon="pi pi-check"
-                  styleClass="w-full"
-                  [loading]="loading()"
-                  [disabled]="categoryForm.invalid || loading()"
-                ></button>
-                
-                <button 
-                  type="button"
-                  pButton 
-                  label="Cancel" 
-                  icon="pi pi-times"
-                  severity="secondary" 
-                  [outlined]="true"
-                  styleClass="w-full"
-                  routerLink="/categories"
-                ></button>
-                
-                @if (isEditMode()) {
-                  <p-divider />
-                  <button 
-                    type="button"
-                    pButton 
-                    label="Delete Category" 
-                    icon="pi pi-trash"
-                    severity="danger" 
-                    [outlined]="true"
-                    styleClass="w-full"
-                    (click)="confirmDelete()"
-                  ></button>
                 }
               </div>
-            </p-card>
 
-            <!-- Quick Stats -->
-            <p-card header="Quick Stats" class="shadow-lg border-0">
-              <div class="space-y-3">
-                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span class="text-gray-600">Attributes Defined</span>
-                  <span class="font-bold text-blue-600">{{ attributes.length }}</span>
-                </div>
-                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span class="text-gray-600">Required Fields</span>
-                  <span class="font-bold text-green-600">{{ getRequiredAttributesCount() }}</span>
-                </div>
-                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span class="text-gray-600">Form Status</span>
-                  <span 
-                    class="font-bold px-2 py-1 rounded text-xs"
-                    [class]="categoryForm.valid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
-                  >
-                    {{ categoryForm.valid ? 'Valid' : 'Invalid' }}
-                  </span>
-                </div>
-                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span class="text-gray-600">Form Touched</span>
-                  <span 
-                    class="font-bold px-2 py-1 rounded text-xs"
-                    [class]="categoryForm.touched ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'"
-                  >
-                    {{ categoryForm.touched ? 'Yes' : 'No' }}
-                  </span>
-                </div>
-              </div>
-            </p-card>
-          </div>
-        </div>
-      </form>
-
-      <!-- Error Message -->
-      @if (error()) {
-        <p-message severity="error" class="w-full">
-          <div class="flex items-center space-x-3">
-            <i class="pi pi-exclamation-triangle"></i>
-            <div>
-              <p class="font-medium">Error</p>
-              <p>{{ error() }}</p>
+              <!-- Add Attribute Button -->
+              <button 
+                type="button"
+                pButton 
+                label="Add New Attribute" 
+                icon="pi pi-plus" 
+                severity="secondary"
+                [outlined]="true"
+                class="w-full mt-4"
+                (click)="addAttribute()"
+              ></button>
             </div>
           </div>
-        </p-message>
-      }
+        </p-card>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="space-y-6">
+        <!-- Category Level Info -->
+        <p-card styleClass="shadow-lg border-0 rounded-xl">
+          <ng-template pTemplate="header">
+            <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+              <h3 class="text-lg font-semibold text-gray-800">Category Level</h3>
+            </div>
+          </ng-template>
+          
+          <div class="p-6">
+            <div class="space-y-4">
+              <div class="text-center p-6 bg-gradient-to-r from-green-500 to-green-600 rounded-xl text-white">
+                <div class="text-4xl mb-2">
+                  @switch (getLevelInfo().level) {
+                    @case (1) { 📁 }
+                    @case (2) { 📂 }
+                    @case (3) { 📄 }
+                  }
+                </div>
+                <h3 class="font-bold text-lg">{{ getLevelInfo().label }}</h3>
+                <p class="text-green-100 text-sm mt-1">{{ getLevelInfo().description }}</p>
+              </div>
+              
+              <div class="space-y-3 text-sm">
+                <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span class="text-gray-600">Maximum Depth</span>
+                  <span class="font-semibold text-gray-900">3 Levels</span>
+                </div>
+                <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span class="text-gray-600">Inheritance</span>
+                  <span class="font-semibold text-green-600">Yes</span>
+                </div>
+                <div class="flex justify-between items-center py-2">
+                  <span class="text-gray-600">Attribute Templates</span>
+                  <span class="font-semibold text-blue-600">{{ attributes.length }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </p-card>
+
+        <!-- Form Actions -->
+        <p-card styleClass="shadow-lg border-0 rounded-xl sticky top-6">
+          <ng-template pTemplate="header">
+            <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+              <h3 class="text-lg font-semibold text-gray-800">Actions</h3>
+            </div>
+          </ng-template>
+          
+          <div class="p-6">
+            <div class="space-y-3">
+              <button 
+                type="submit"
+                pButton 
+                [label]="isEditMode() ? 'Update Category' : 'Create Category'"
+                icon="pi pi-check"
+                class="w-full justify-center"
+                [loading]="loading()"
+                [disabled]="categoryForm.invalid || loading()"
+              ></button>
+              
+              <button 
+                type="button"
+                pButton 
+                label="Cancel" 
+                icon="pi pi-times"
+                severity="secondary" 
+                [outlined]="true"
+                class="w-full justify-center"
+                routerLink="/categories"
+              ></button>
+              
+              @if (isEditMode()) {
+                <p-divider />
+                <button 
+                  type="button"
+                  pButton 
+                  label="Delete Category" 
+                  icon="pi pi-trash"
+                  severity="danger" 
+                  [outlined]="true"
+                  class="w-full justify-center"
+                  (click)="confirmDelete()"
+                ></button>
+              }
+            </div>
+          </div>
+        </p-card>
+
+        <!-- Quick Stats -->
+        <p-card styleClass="shadow-lg border-0 rounded-xl">
+          <ng-template pTemplate="header">
+            <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+              <h3 class="text-lg font-semibold text-gray-800">Quick Stats</h3>
+            </div>
+          </ng-template>
+          
+          <div class="p-6">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span class="text-gray-600">Attributes Defined</span>
+                <span class="font-bold text-blue-600">{{ attributes.length }}</span>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span class="text-gray-600">Required Fields</span>
+                <span class="font-bold text-green-600">{{ getRequiredAttributesCount() }}</span>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span class="text-gray-600">Form Status</span>
+                <span 
+                  class="font-bold px-3 py-1 rounded-full text-xs"
+                  [class]="categoryForm.valid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                >
+                  {{ categoryForm.valid ? 'Valid' : 'Invalid' }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span class="text-gray-600">Form Touched</span>
+                <span 
+                  class="font-bold px-3 py-1 rounded-full text-xs"
+                  [class]="categoryForm.touched ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'"
+                >
+                  {{ categoryForm.touched ? 'Yes' : 'No' }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </p-card>
+      </div>
     </div>
-    <p-toast />
-    <p-confirmDialog />
+  </form>
+
+  <!-- Error Message -->
+  @if (error()) {
+    <p-message severity="error" class="w-full">
+      <div class="flex items-center gap-3 p-2">
+        <i class="pi pi-exclamation-triangle text-lg"></i>
+        <div>
+          <p class="font-medium">Error</p>
+          <p class="text-sm">{{ error() }}</p>
+        </div>
+      </div>
+    </p-message>
+  }
+</div>
+
+<p-toast />
+<p-confirmDialog />

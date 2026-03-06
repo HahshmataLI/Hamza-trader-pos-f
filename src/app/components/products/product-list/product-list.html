@@ -105,7 +105,7 @@
 
         <!-- Products Table -->
         <p-table 
-          [value]="products()" 
+          [value]="filteredProducts()"
           [loading]="loading()"
           [paginator]="true" 
           [rows]="pagination().limit"
@@ -192,12 +192,12 @@
               <td>
                 <div class="flex space-x-2">
                   <p-button 
-                    icon="pi pi-eye" 
-                    severity="secondary" 
-                    [text]="true" 
-                    [rounded]="true"
-                    [routerLink]="['/products', product._id]"
-                  />
+                      icon="pi pi-eye" 
+                      severity="secondary" 
+                      [text]="true" 
+                      [rounded]="true"
+                      [routerLink]="['/products', product._id]"
+                    />
                   <p-button 
                     *ngIf="authService.hasAnyRole(['admin', 'manager'])"
                     icon="pi pi-pencil" 

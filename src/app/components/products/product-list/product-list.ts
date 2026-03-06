@@ -28,7 +28,10 @@ export class ProductList  implements OnInit {
   authService = inject(AuthService);
 
   products = signal<Product[]>([]);
-  loading = signal(true);
+filteredProducts = signal<Product[]>([]);
+  loading = signal(false);
+
+  
   summary = signal<any>({});
   pagination = signal({
     currentPage: 1,
@@ -59,44 +62,43 @@ export class ProductList  implements OnInit {
 
   // ... existing code ...
 
-  loadProducts(): void {
+loadProducts(): void {
+
+  if (this.products().length === 0) {
     this.loading.set(true);
-    
-    const params: any = {
-      page: this.pagination().currentPage,
-      limit: this.pagination().limit
-    };
-
-    if (this.searchTerm) params.search = this.searchTerm;
-    if (this.selectedCategory !== 'all') params.category = this.selectedCategory;
-    if (this.stockFilter === 'lowStock') params.lowStock = true;
-
-    console.log('Loading products with params:', params); // Debug log
-
-    this.productService.getProducts(params).subscribe({
-      next: (response) => {
-        console.log('Products response:', response); // Debug log
-        this.products.set(response.data || []);
-        this.summary.set(response.summary || {});
-        this.pagination.update(p => ({
-          ...p,
-          totalPages: response.pagination?.totalPages || 0,
-          totalProducts: response.pagination?.totalProducts || 0
-        }));
-        this.loading.set(false);
-      },
-      error: (error) => {
-        console.error('Error loading products:', error); // Debug log
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to load products: ' + (error.error?.error || error.message)
-        });
-        this.loading.set(false);
-      }
-    });
   }
 
+  const params: any = {
+    page: this.pagination().currentPage,
+    limit: this.pagination().limit
+  };
+
+  if (this.selectedCategory !== 'all') params.category = this.selectedCategory;
+  if (this.stockFilter === 'lowStock') params.lowStock = true;
+
+  this.productService.getProducts(params).subscribe({
+    next: (response) => {
+
+      const data = response.data || [];
+
+      this.products.set(data);
+      this.filteredProducts.set(data);
+
+      this.summary.set(response.summary || {});
+
+      this.pagination.update(p => ({
+        ...p,
+        totalPages: response.pagination?.totalPages || 0,
+        totalProducts: response.pagination?.totalProducts || 0
+      }));
+
+      this.loading.set(false);
+    },
+    error: () => {
+      this.loading.set(false);
+    }
+  });
+}
 
   loadCategories(): void {
     this.categoryService.getCategories().subscribe({
@@ -115,19 +117,49 @@ export class ProductList  implements OnInit {
     });
   }
 
-  onSearch(): void {
-    // Debounce search
-    clearTimeout(this.searchTimeout);
-    this.searchTimeout = setTimeout(() => {
-      this.pagination.update(p => ({ ...p, currentPage: 1 }));
-      this.loadProducts();
-    }, 500);
+ onSearch(): void {
+
+  const term = this.searchTerm.toLowerCase().trim();
+
+  if (!term) {
+    this.filteredProducts.set(this.products());
+    return;
   }
 
-  onFilterChange(): void {
-    this.pagination.update(p => ({ ...p, currentPage: 1 }));
-    this.loadProducts();
+  const filtered = this.products().filter(product =>
+    product.name.toLowerCase().includes(term) ||
+    product.sku.toLowerCase().includes(term) ||
+    (product.barcode && product.barcode.toLowerCase().includes(term))
+  );
+
+  this.filteredProducts.set(filtered);
+}
+
+onFilterChange(): void {
+
+  let filtered = [...this.products()];
+
+  if (this.selectedCategory !== 'all') {
+    filtered = filtered.filter(p => {
+      if (typeof p.category === 'string') return false;
+      return p.category._id === this.selectedCategory;
+    });
   }
+
+  if (this.stockFilter === 'lowStock') {
+    filtered = filtered.filter(p => p.stock <= p.minStockLevel);
+  }
+
+  if (this.stockFilter === 'outOfStock') {
+    filtered = filtered.filter(p => p.stock === 0);
+  }
+
+  if (this.stockFilter === 'inStock') {
+    filtered = filtered.filter(p => p.stock > 0);
+  }
+
+  this.filteredProducts.set(filtered);
+}
 
   onPageChange(event: any): void {
     this.pagination.update(p => ({
