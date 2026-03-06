@@ -15,7 +15,7 @@
   "options": {
     "browser": "src/main.ts",
     "tsConfig": "tsconfig.app.json",
-    "outputPath": "../backend/public", 
+   "outputPath": "dist/my-pos-inventory", 
    "assets": [
   "src/favicon.ico",
   "src/assets",
