@@ -1,33 +1,32 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray, FormControl  } from '@angular/forms';
+import { Component, inject, OnInit, signal, OnDestroy } from '@angular/core';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ProductService } from '../../../services/products/product-service';
 import { CategoryService } from '../../../services/categories/category';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { AuthService } from '../../../services/auth';
 import { CategoryAttribute } from '../../../interfaces/category.interface';
-import { CreateProductRequest, Product } from '../../../interfaces/product.interface';
+import { Product } from '../../../interfaces/product.interface';
 import { UtilsModule } from '../../../utils.module';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef } from '@angular/core';
+import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
+
 interface CategoryOption {
   label: string;
   value: string;
   level: number;
   attributes: CategoryAttribute[];
 }
-interface ExtendedCategoryAttribute extends CategoryAttribute {
-  categoryName: string;
-  inherited: boolean;
-}
+
 @Component({
   selector: 'app-product-form',
-  imports: [ReactiveFormsModule,UtilsModule,CommonModule],
+  imports: [ReactiveFormsModule, UtilsModule, CommonModule],
   templateUrl: './product-form.html',
   styleUrl: './product-form.css',
   providers: [ConfirmationService, MessageService],
 })
-export class ProductForm  implements OnInit{
+export class ProductForm implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   private productService = inject(ProductService);
   private categoryService = inject(CategoryService);
@@ -40,18 +39,40 @@ export class ProductForm  implements OnInit{
 
   productForm!: FormGroup;
   loading = signal(false);
+  submitting = signal(false);
   error = signal('');
   isEditMode = signal(false);
   productId = signal<string | null>(null);
   categoryOptions = signal<CategoryOption[]>([]);
   allCategoryAttributes = signal<CategoryAttribute[]>([]);
   autoGenerateSku = signal(true);
+  autoGenerateBarcode = signal(true);
   skuSuggestions = signal<string[]>([]);
+
+  // SIMPLIFIED IMAGE STATE
+  existingImages = signal<string[]>([]); // URLs from server
+  newImageFiles = signal<File[]>([]); // Files to upload
+  newImagePreviews = signal<string[]>([]); // Previews for new files
+  isUploading = signal(false);
+
+  private destroy$ = new Subject<void>();
 
   ngOnInit(): void {
     this.initializeForm();
     this.loadCategories();
     this.checkEditMode();
+    this.setupBarcodeGeneration();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    // Clean up object URLs
+    this.newImagePreviews().forEach(url => {
+      if (url.startsWith('blob:')) {
+        URL.revokeObjectURL(url);
+      }
+    });
   }
 
   initializeForm(): void {
@@ -66,27 +87,62 @@ export class ProductForm  implements OnInit{
       stock: [0, [Validators.required, Validators.min(0)]],
       minStockLevel: [5, [Validators.required, Validators.min(0)]],
       description: [''],
-      images: [[]],
       isActive: [true],
       attributes: this.fb.group({})
     });
 
     // Auto-generate SKU when product name changes (only for new products)
     if (!this.isEditMode()) {
-      this.productForm.get('name')?.valueChanges.subscribe(name => {
-        if (this.autoGenerateSku() && name) {
-          this.generateSkuSuggestions(name);
-        }
-      });
-
-      this.productForm.get('category')?.valueChanges.subscribe(categoryId => {
-        if (this.autoGenerateSku() && categoryId) {
-          const name = this.productForm.get('name')?.value;
-          if (name) {
+      this.productForm.get('name')?.valueChanges
+        .pipe(
+          debounceTime(300),
+          distinctUntilChanged(),
+          takeUntil(this.destroy$)
+        )
+        .subscribe(name => {
+          if (this.autoGenerateSku() && name) {
             this.generateSkuSuggestions(name);
           }
-        }
-      });
+        });
+
+      this.productForm.get('category')?.valueChanges
+        .pipe(
+          debounceTime(300),
+          distinctUntilChanged(),
+          takeUntil(this.destroy$)
+        )
+        .subscribe(categoryId => {
+          if (this.autoGenerateSku() && categoryId) {
+            const name = this.productForm.get('name')?.value;
+            if (name) {
+              this.generateSkuSuggestions(name);
+            }
+          }
+        });
+    }
+  }
+
+  // Barcode Generation Methods
+  private setupBarcodeGeneration(): void {
+    if (!this.isEditMode() && this.autoGenerateBarcode()) {
+      this.generateBarcode();
+    }
+  }
+
+  generateBarcode(): void {
+    const timestamp = Date.now().toString().slice(-8);
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    const barcode = `PROD${timestamp}${random}`;
+    this.productForm.patchValue({ barcode });
+  }
+
+  toggleBarcodeGeneration(): void {
+    this.autoGenerateBarcode.set(!this.autoGenerateBarcode());
+    
+    if (this.autoGenerateBarcode() && !this.isEditMode()) {
+      this.generateBarcode();
+    } else if (!this.isEditMode()) {
+      this.productForm.patchValue({ barcode: '' });
     }
   }
 
@@ -105,7 +161,6 @@ export class ProductForm  implements OnInit{
     
     this.skuSuggestions.set(suggestions);
     
-    // Auto-select the first suggestion
     if (suggestions.length > 0) {
       this.productForm.patchValue({ sku: suggestions[0] });
     }
@@ -157,77 +212,147 @@ export class ProductForm  implements OnInit{
     }
   }
 
-  isFormValid(): boolean {
-    console.log('=== Checking Form Validity ===');
+  // FIXED IMAGE UPLOAD
+  onImageSelect(event: any): void {
+    const files = event.files as File[];
     
-    // First check the main form controls
+    if (files && files.length > 0) {
+      // Show uploading indicator
+      this.isUploading.set(true);
+      
+      // Validate files
+      const validFiles: File[] = [];
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        if (!file.type.startsWith('image/')) {
+          this.messageService.add({
+            severity: 'warn',
+            summary: 'Warning',
+            detail: `${file.name} is not an image`
+          });
+          continue;
+        }
+        
+        if (file.size > 10 * 1024 * 1024) {
+          this.messageService.add({
+            severity: 'warn',
+            summary: 'Warning',
+            detail: `${file.name} is too large (max 10MB)`
+          });
+          continue;
+        }
+        
+        validFiles.push(file);
+      }
+
+      if (validFiles.length === 0) {
+        this.isUploading.set(false);
+        return;
+      }
+
+      // Process each file
+      let processedCount = 0;
+      
+      validFiles.forEach(file => {
+        const reader = new FileReader();
+        
+        reader.onload = (e: ProgressEvent<FileReader>) => {
+          // Add file and preview
+          this.newImageFiles.update(files => [...files, file]);
+          this.newImagePreviews.update(previews => [...previews, e.target?.result as string]);
+          
+          processedCount++;
+          
+          // When all files are processed, hide uploading indicator
+          if (processedCount === validFiles.length) {
+            this.isUploading.set(false);
+            
+            // Force change detection
+            this.cdr.detectChanges();
+            
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Success',
+              detail: `${validFiles.length} image(s) added`
+            });
+          }
+        };
+        
+        reader.onerror = () => {
+          processedCount++;
+          if (processedCount === validFiles.length) {
+            this.isUploading.set(false);
+          }
+        };
+        
+        reader.readAsDataURL(file);
+      });
+    }
+  }
+
+  removeImage(type: 'existing' | 'new', index: number): void {
+    if (type === 'existing') {
+      // Remove from existing images
+      this.existingImages.update(images => images.filter((_, i) => i !== index));
+    } else {
+      // Remove from new images
+      this.newImageFiles.update(files => files.filter((_, i) => i !== index));
+      this.newImagePreviews.update(previews => previews.filter((_, i) => i !== index));
+    }
+  }
+
+  getAllImages(): { url: string; type: 'existing' | 'new' }[] {
+    const existing = this.existingImages().map(url => ({ url, type: 'existing' as const }));
+    const newImages = this.newImagePreviews().map(url => ({ url, type: 'new' as const }));
+    return [...existing, ...newImages];
+  }
+
+  // Form Validation
+  isFormValid(): boolean {
+    // Check main controls
     const mainControls = ['name', 'sku', 'category', 'costPrice', 'mrp', 'minSalePrice', 'stock', 'minStockLevel'];
     let mainFormValid = true;
     
     for (const controlName of mainControls) {
       const control = this.productForm.get(controlName);
       if (control?.invalid) {
-        console.log(`Invalid main control ${controlName}:`, control.errors);
         mainFormValid = false;
+        break;
       }
     }
 
-    console.log('Main form valid:', mainFormValid);
-    
     if (!mainFormValid) {
       return false;
     }
 
-    // Check attributes separately
+    // Check required attributes
     const attributesGroup = this.productForm.get('attributes') as FormGroup;
     let attributesValid = true;
     
     if (attributesGroup && this.allCategoryAttributes().length > 0) {
       const requiredAttributes = this.allCategoryAttributes().filter(attr => attr.required);
-      console.log('Required attributes:', requiredAttributes.map(a => a.name));
       
       for (const attribute of requiredAttributes) {
         const control = attributesGroup.get(attribute.name);
         const value = control?.value;
         
-        // For boolean attributes, any value is valid (including false)
         if (attribute.type === 'boolean') {
-          const isValid = control && value !== null && value !== undefined;
-          console.log(`Boolean attribute ${attribute.name}:`, { value, isValid });
-          
-          if (!isValid) {
-            console.log(`❌ Missing required boolean attribute: ${attribute.name}`);
+          if (value === null || value === undefined) {
             attributesValid = false;
             break;
           }
         } else {
-          // For other attribute types, check for empty values
-          const isValid = control && value !== null && value !== '' && value !== undefined;
-          
-          console.log(`Attribute ${attribute.name}:`, { 
-            value: value, 
-            valid: control?.valid, 
-            errors: control?.errors,
-            isValid: isValid 
-          });
-          
-          if (!isValid) {
-            console.log(`❌ Missing required attribute: ${attribute.name}`);
+          if (!value || value === '' || value === null || value === undefined) {
             attributesValid = false;
             break;
           }
         }
       }
-    } else {
-      console.log('No attributes to validate or attributes group not ready');
-      attributesValid = true;
     }
-
-    console.log('Attributes valid:', attributesValid);
-    console.log('Final form valid:', mainFormValid && attributesValid);
-    console.log('=== End Form Validity Check ===');
     
-    return mainFormValid && attributesValid;
+    return attributesValid;
   }
 
   checkEditMode(): void {
@@ -236,7 +361,12 @@ export class ProductForm  implements OnInit{
       if (id && id !== 'new') {
         this.isEditMode.set(true);
         this.productId.set(id);
+        this.autoGenerateSku.set(false);
+        this.autoGenerateBarcode.set(false);
         this.loadProduct(id);
+      } else {
+        // Generate barcode for new product
+        this.generateBarcode();
       }
     });
   }
@@ -253,6 +383,7 @@ export class ProductForm  implements OnInit{
         this.loading.set(false);
       },
       error: (error) => {
+        console.error('Error loading product:', error);
         this.error.set('Failed to load product');
         this.loading.set(false);
       }
@@ -260,8 +391,6 @@ export class ProductForm  implements OnInit{
   }
 
   populateForm(product: Product): void {
-    this.autoGenerateSku.set(false);
-
     this.productForm.patchValue({
       name: product.name,
       sku: product.sku,
@@ -273,9 +402,13 @@ export class ProductForm  implements OnInit{
       stock: product.stock,
       minStockLevel: product.minStockLevel,
       description: product.description || '',
-      images: product.images || [],
       isActive: product.isActive
     });
+
+    // Set existing images
+    if (product.images && product.images.length > 0) {
+      this.existingImages.set(product.images);
+    }
 
     const categoryId = typeof product.category === 'string' ? product.category : product.category._id;
     this.loadCategoryAttributes(categoryId, product.attributes);
@@ -289,8 +422,7 @@ export class ProductForm  implements OnInit{
           label: `${'— '.repeat(category.level - 1)}${category.name} (Level ${category.level})`,
           value: category._id,
           level: category.level,
-          attributes: category.attributes || [],
-          parentId: typeof category.parent === 'string' ? category.parent : category.parent?._id
+          attributes: category.attributes || []
         }));
         this.categoryOptions.set(options);
       },
@@ -302,7 +434,6 @@ export class ProductForm  implements OnInit{
 
   onCategoryChange(): void {
     const categoryId = this.productForm.get('category')?.value;
-    console.log('Selected category:', categoryId);
     
     if (categoryId) {
       this.loadCategoryAttributes(categoryId);
@@ -317,21 +448,17 @@ export class ProductForm  implements OnInit{
     if (selectedCategory) {
       this.allCategoryAttributes.set(selectedCategory.attributes);
       
-      console.log('Creating attribute controls for:', selectedCategory.attributes);
-      
       // Create dynamic form controls for attributes
       const attributeControls: { [key: string]: any } = {};
       selectedCategory.attributes.forEach(attr => {
         const existingValue = existingAttributes ? existingAttributes[attr.name] : null;
         const validators = attr.required ? [Validators.required] : [];
         
-        // Set default values for different attribute types
         let defaultValue: any = null;
         
         if (existingValue !== null && existingValue !== undefined) {
           defaultValue = existingValue;
         } else {
-          // Set sensible defaults for required fields
           if (attr.required) {
             switch (attr.type) {
               case 'text':
@@ -359,21 +486,11 @@ export class ProductForm  implements OnInit{
         }
         
         attributeControls[attr.name] = [defaultValue, validators];
-        
-        console.log(`Attribute control: ${attr.name}`, { 
-          existingValue: existingValue,
-          defaultValue: defaultValue,
-          validators: validators 
-        });
       });
       
       const attributesGroup = this.fb.group(attributeControls);
-      console.log('Created attributes group:', attributesGroup);
-      
-      // Update the form
       this.productForm.setControl('attributes', attributesGroup);
       
-      // Trigger change detection after a brief delay
       setTimeout(() => {
         this.cdr.detectChanges();
       });
@@ -382,30 +499,6 @@ export class ProductForm  implements OnInit{
 
   getAttributeOptions(attribute: CategoryAttribute): { label: string; value: any }[] {
     return attribute.options?.map(option => ({ label: option, value: option })) || [];
-  }
-
-  onImageSelect(event: any): void {
-    const files = event.files;
-    if (files && files.length > 0) {
-      const currentImages = this.productForm.get('images')?.value || [];
-      const newImages = [...currentImages];
-      
-      Array.from(files).forEach((file: any) => {
-        const reader = new FileReader();
-        reader.onload = (e: any) => {
-          newImages.push(e.target.result);
-          this.productForm.patchValue({ images: newImages });
-          this.cdr.detectChanges();
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-  }
-
-  removeImage(index: number): void {
-    const images = this.productForm.get('images')?.value || [];
-    images.splice(index, 1);
-    this.productForm.patchValue({ images });
   }
 
   getProfitMargin(): number {
@@ -446,12 +539,10 @@ export class ProductForm  implements OnInit{
       const value = control?.value;
       
       if (attribute.type === 'boolean') {
-        // For boolean, any value (including false) counts as filled
         if (control && value !== null && value !== undefined) {
           count++;
         }
       } else {
-        // For other types, check for non-empty values
         if (control && value !== null && value !== '' && value !== undefined) {
           count++;
         }
@@ -468,47 +559,75 @@ export class ProductForm  implements OnInit{
   onSubmit(): void {
     this.productForm.markAllAsTouched();
     
-    if (this.isFormValid()) {
-      this.loading.set(true);
-      this.error.set('');
-
-      const formValue = this.productForm.value;
-      const productData: CreateProductRequest = {
-        name: formValue.name,
-        sku: formValue.sku,
-        barcode: formValue.barcode,
-        category: formValue.category,
-        costPrice: formValue.costPrice,
-        mrp: formValue.mrp,
-        minSalePrice: formValue.minSalePrice,
-        stock: formValue.stock,
-        minStockLevel: formValue.minStockLevel,
-        description: formValue.description,
-        images: formValue.images,
-        attributes: formValue.attributes
-      };
-
-      const request = this.isEditMode() 
-        ? this.productService.updateProduct(this.productId()!, productData)
-        : this.productService.createProduct(productData);
-
-      request.subscribe({
-        next: (response) => {
-          this.messageService.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: `Product ${this.isEditMode() ? 'updated' : 'created'} successfully`
-          });
-          this.router.navigate(['/products']);
-        },
-        error: (error) => {
-          this.error.set(error.error?.error || 'An error occurred');
-          this.loading.set(false);
-        }
-      });
-    } else {
+    if (!this.isFormValid()) {
       this.error.set('Please fix all form errors before submitting');
+      return;
     }
+
+    this.submitting.set(true);
+    this.error.set('');
+
+    const formValue = this.productForm.value;
+    
+    // Create FormData for file upload
+    const formData = new FormData();
+    
+    // Append form fields
+    formData.append('name', formValue.name);
+    formData.append('sku', formValue.sku);
+    if (formValue.barcode) {
+      formData.append('barcode', formValue.barcode);
+    }
+    formData.append('category', formValue.category);
+    formData.append('costPrice', formValue.costPrice.toString());
+    formData.append('mrp', formValue.mrp.toString());
+    formData.append('minSalePrice', formValue.minSalePrice.toString());
+    formData.append('stock', formValue.stock.toString());
+    formData.append('minStockLevel', formValue.minStockLevel.toString());
+    
+    if (formValue.description) {
+      formData.append('description', formValue.description);
+    }
+    
+    formData.append('isActive', formValue.isActive.toString());
+    
+    // Append attributes as JSON string
+    if (formValue.attributes) {
+      formData.append('attributes', JSON.stringify(formValue.attributes));
+    }
+    
+    // Append new image files
+    this.newImageFiles().forEach(file => {
+      formData.append('images', file);
+    });
+
+    // Append existing image paths (for edit mode)
+    if (this.isEditMode() && this.existingImages().length > 0) {
+      formData.append('existingImages', JSON.stringify(this.existingImages()));
+    }
+
+    const request = this.isEditMode() 
+      ? this.productService.updateProduct(this.productId()!, formData)
+      : this.productService.createProduct(formData);
+
+    request.subscribe({
+      next: (response) => {
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: `Product ${this.isEditMode() ? 'updated' : 'created'} successfully`
+        });
+        
+        setTimeout(() => {
+          this.router.navigate(['/products']);
+        }, 1500);
+      },
+      error: (error) => {
+        console.error('Submission error:', error);
+        this.error.set(error.error?.error || 'An error occurred while saving the product');
+        this.submitting.set(false);
+      }
+    });
   }
 
   confirmDelete(): void {
@@ -532,13 +651,36 @@ export class ProductForm  implements OnInit{
           this.router.navigate(['/products']);
         },
         error: (error) => {
+          console.error('Delete error:', error);
           this.messageService.add({
             severity: 'error',
             summary: 'Error',
-            detail: 'Failed to delete product'
+            detail: error.error?.error || 'Failed to delete product'
           });
         }
       });
     }
+  }
+
+  hasError(controlName: string): boolean {
+    const control = this.productForm.get(controlName);
+    return !!(control && control.invalid && control.touched);
+  }
+
+  getErrorMessage(controlName: string): string {
+    const control = this.productForm.get(controlName);
+    if (!control || !control.errors) return '';
+    
+    if (control.errors['required']) {
+      return `${controlName} is required`;
+    }
+    if (control.errors['min']) {
+      return `${controlName} must be at least ${control.errors['min'].min}`;
+    }
+    if (control.errors['minlength']) {
+      return `${controlName} must be at least ${control.errors['minlength'].requiredLength} characters`;
+    }
+    
+    return 'Invalid value';
   }
 }

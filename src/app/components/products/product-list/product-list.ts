@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, OnDestroy } from '@angular/core';
 import { ProductService } from '../../../services/products/product-service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { CategoryService } from '../../../services/categories/category';
@@ -7,19 +7,34 @@ import { AuthService } from '../../../services/auth';
 import { Product } from '../../../interfaces/product.interface';
 import { UtilsModule } from '../../../utils.module';
 import { CommonModule } from '@angular/common';
+import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
+import { TableLazyLoadEvent } from 'primeng/table';
+import { API_URL, SERVER_URL } from '../../../utils/constants'; // Import your API URL
 
 interface CategoryOption {
   label: string;
   value: string;
 }
+
+interface PaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  totalProducts: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' | null;
+
 @Component({
   selector: 'app-product-list',
-  imports: [RouterLink,UtilsModule,CommonModule],
+  imports: [RouterLink, UtilsModule, CommonModule],
   templateUrl: './product-list.html',
   styleUrl: './product-list.css',
   providers: [ConfirmationService, MessageService],
 })
-export class ProductList  implements OnInit {
+export class ProductList implements OnInit, OnDestroy {
   private productService = inject(ProductService);
   private categoryService = inject(CategoryService);
   private confirmationService = inject(ConfirmationService);
@@ -27,78 +42,156 @@ export class ProductList  implements OnInit {
   private router = inject(Router);
   authService = inject(AuthService);
 
-  products = signal<Product[]>([]);
-filteredProducts = signal<Product[]>([]);
-  loading = signal(false);
+  Math = Math;
+  apiUrl = API_URL; // Make API_URL available in template
 
+  products = signal<Product[]>([]);
+  loading = signal(false);
+  initialLoad = signal(true);
   
   summary = signal<any>({});
-  pagination = signal({
+  pagination = signal<PaginationInfo>({
     currentPage: 1,
     totalPages: 0,
     totalProducts: 0,
-    limit: 10
+    limit: 10,
+    hasNextPage: false,
+    hasPrevPage: false
   });
 
-  searchTerm = '';
-  selectedCategory = 'all';
-  stockFilter = 'all';
+  // Filters
+  searchTerm = signal('');
+  selectedCategory = signal('all');
+  stockFilter = signal('all');
   
+  // Sort state
+  sortField = signal('createdAt');
+  sortOrder = signal(-1);
+
   categoryOptions: CategoryOption[] = [];
   stockOptions = [
     { label: 'All Products', value: 'all' },
-    { label: 'In Stock', value: 'inStock' },
     { label: 'Low Stock', value: 'lowStock' },
     { label: 'Out of Stock', value: 'outOfStock' }
   ];
 
-  private searchTimeout: any;
+  private searchSubject = new Subject<string>();
+  private filterSubject = new Subject<void>();
+  private destroy$ = new Subject<void>();
 
   ngOnInit(): void {
     this.loadCategories();
+    this.setupSearchDebounce();
+    this.setupFilterDebounce();
+    // Initial load
     this.loadProducts();
   }
 
-
-  // ... existing code ...
-
-loadProducts(): void {
-
-  if (this.products().length === 0) {
-    this.loading.set(true);
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
-  const params: any = {
-    page: this.pagination().currentPage,
-    limit: this.pagination().limit
-  };
+  private setupSearchDebounce(): void {
+    this.searchSubject.pipe(
+      debounceTime(500),
+      distinctUntilChanged(),
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
+      this.pagination.update(p => ({ ...p, currentPage: 1 }));
+      this.loadProducts();
+    });
+  }
 
-  if (this.selectedCategory !== 'all') params.category = this.selectedCategory;
-  if (this.stockFilter === 'lowStock') params.lowStock = true;
+  private setupFilterDebounce(): void {
+    this.filterSubject.pipe(
+      debounceTime(300),
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
+      this.pagination.update(p => ({ ...p, currentPage: 1 }));
+      this.loadProducts();
+    });
+  }
 
-  this.productService.getProducts(params).subscribe({
-    next: (response) => {
+  loadProducts(event?: TableLazyLoadEvent): void {
+    this.loading.set(true);
 
-      const data = response.data || [];
+    if (event) {
+      const page = event?.first != null && event?.rows != null
+        ? Math.floor(event.first / event.rows) + 1
+        : 1;
 
-      this.products.set(data);
-      this.filteredProducts.set(data);
-
-      this.summary.set(response.summary || {});
-
+      const limit = event?.rows ?? this.pagination().limit;
+      
       this.pagination.update(p => ({
         ...p,
-        totalPages: response.pagination?.totalPages || 0,
-        totalProducts: response.pagination?.totalProducts || 0
+        currentPage: page,
+        limit: limit
       }));
 
-      this.loading.set(false);
-    },
-    error: () => {
-      this.loading.set(false);
+      if (event.sortField) {
+        const sortField = Array.isArray(event.sortField)
+          ? event.sortField[0]
+          : event.sortField;
+
+        this.sortField.set(sortField);
+        this.sortOrder.set(event.sortOrder === 1 ? 1 : -1);
+      }
     }
-  });
-}
+
+    const params: any = {
+      page: this.pagination().currentPage,
+      limit: this.pagination().limit,
+      sortField: this.sortField(),
+      sortOrder: this.sortOrder()
+    };
+
+    if (this.searchTerm() && this.searchTerm().length >= 2) {
+      params.search = this.searchTerm();
+    }
+
+    if (this.selectedCategory() !== 'all') {
+      params.category = this.selectedCategory();
+    }
+
+    if (this.stockFilter() === 'lowStock') {
+      params.lowStock = true;
+    }
+
+    this.productService.getProducts(params).subscribe({
+      next: (response) => {
+        this.products.set(response.data || []);
+        
+        this.summary.set(response.summary || {
+          totalProducts: 0,
+          totalStockValue: 0,
+          lowStockCount: 0,
+          outOfStockCount: 0
+        });
+
+        this.pagination.update(p => ({
+          ...p,
+          totalPages: Math.ceil((response.pagination?.totalProducts || 0) / p.limit),
+          totalProducts: response.pagination?.totalProducts || 0,
+          hasNextPage: p.currentPage < Math.ceil((response.pagination?.totalProducts || 0) / p.limit),
+          hasPrevPage: p.currentPage > 1
+        }));
+
+        this.loading.set(false);
+        this.initialLoad.set(false);
+      },
+      error: (error) => {
+        console.error('Failed to load products:', error);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to load products. Please try again.'
+        });
+        this.loading.set(false);
+        this.initialLoad.set(false);
+      }
+    });
+  }
 
   loadCategories(): void {
     this.categoryService.getCategories().subscribe({
@@ -117,57 +210,24 @@ loadProducts(): void {
     });
   }
 
- onSearch(): void {
-
-  const term = this.searchTerm.toLowerCase().trim();
-
-  if (!term) {
-    this.filteredProducts.set(this.products());
-    return;
+  onSearch(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.searchTerm.set(input.value);
+    if (input.value.length >= 2 || input.value.length === 0) {
+      this.searchSubject.next(input.value);
+    }
   }
 
-  const filtered = this.products().filter(product =>
-    product.name.toLowerCase().includes(term) ||
-    product.sku.toLowerCase().includes(term) ||
-    (product.barcode && product.barcode.toLowerCase().includes(term))
-  );
-
-  this.filteredProducts.set(filtered);
-}
-
-onFilterChange(): void {
-
-  let filtered = [...this.products()];
-
-  if (this.selectedCategory !== 'all') {
-    filtered = filtered.filter(p => {
-      if (typeof p.category === 'string') return false;
-      return p.category._id === this.selectedCategory;
-    });
+  onCategoryChange(): void {
+    this.filterSubject.next();
   }
 
-  if (this.stockFilter === 'lowStock') {
-    filtered = filtered.filter(p => p.stock <= p.minStockLevel);
+  onStockChange(): void {
+    this.filterSubject.next();
   }
 
-  if (this.stockFilter === 'outOfStock') {
-    filtered = filtered.filter(p => p.stock === 0);
-  }
-
-  if (this.stockFilter === 'inStock') {
-    filtered = filtered.filter(p => p.stock > 0);
-  }
-
-  this.filteredProducts.set(filtered);
-}
-
-  onPageChange(event: any): void {
-    this.pagination.update(p => ({
-      ...p,
-      currentPage: event.page + 1,
-      limit: event.rows
-    }));
-    this.loadProducts();
+  onLazyLoad(event: TableLazyLoadEvent): void {
+    this.loadProducts(event);
   }
 
   getCategoryName(product: Product): string {
@@ -175,6 +235,27 @@ onFilterChange(): void {
     if (typeof product.category === 'string') return 'Loading...';
     return product.category.name;
   }
+
+  getStockSeverity(stock: number, minStockLevel: number): TagSeverity {
+    if (stock === 0) return 'danger';
+    if (stock <= minStockLevel) return 'warn';
+    return 'success';
+  }
+
+  getStockStatus(stock: number, minStockLevel: number): string {
+    if (stock === 0) return 'Out of Stock';
+    if (stock <= minStockLevel) return 'Low Stock';
+    return 'In Stock';
+  }
+
+  // FIXED: Construct full image URL
+getImageUrl(imagePath?: string): string {
+  if (!imagePath) {
+    return 'assets/images/placeholder.png';
+  }
+
+  return `${SERVER_URL}${imagePath}`;
+}
 
   confirmDelete(product: Product): void {
     this.confirmationService.confirm({
@@ -193,15 +274,39 @@ onFilterChange(): void {
           summary: 'Success',
           detail: 'Product deleted successfully'
         });
+        
+        // Reload current page
         this.loadProducts();
       },
       error: (error) => {
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
-          detail: 'Failed to delete product'
+          detail: error.error?.error || 'Failed to delete product'
         });
       }
     });
+  }
+// Add this method to handle image loading errors
+handleImageError(event: Event): void {
+  const img = event.target as HTMLImageElement;
+
+  if (!img.src.includes('placeholder.png')) {
+    img.src = 'assets/images/placeholder.png';
+  }
+}
+  refreshProducts(): void {
+    this.pagination.update(p => ({ ...p, currentPage: 1 }));
+    this.loadProducts();
+  }
+
+  clearFilters(): void {
+    this.searchTerm.set('');
+    this.selectedCategory.set('all');
+    this.stockFilter.set('all');
+    this.sortField.set('createdAt');
+    this.sortOrder.set(-1);
+    this.pagination.update(p => ({ ...p, currentPage: 1 }));
+    this.loadProducts();
   }
 }

@@ -21,6 +21,7 @@
         severity="secondary"
         [routerLink]="['/products', productId, 'edit']"
       />
+      
       <p-button 
         label="Back to List" 
         icon="pi pi-list" 
@@ -30,7 +31,14 @@
       />
     </div>
   </div>
-
+@if (product()?.barcode) {
+    <p-button 
+      label="Print Barcode" 
+      icon="pi pi-qrcode" 
+      severity="success"
+      (onClick)="openBarcodeModal()"
+    />
+  }
   <!-- Loading State -->
   @if (loading()) {
     <div class="flex justify-center items-center py-12">
@@ -49,7 +57,7 @@
             @if (product.images && product.images.length > 0) {
               <div class="relative">
                 <img 
-                  [src]="selectedImage || product.images[0]" 
+                  [src]="getImageUrl(selectedImage || product.images[0])"
                   [alt]="product.name"
                   class="w-full h-64 object-cover rounded-lg border border-gray-200"
                 />
@@ -60,7 +68,7 @@
                 <div class="grid grid-cols-4 gap-2">
                   @for (image of product.images; track image) {
                     <img 
-                      [src]="image" 
+                      [src]="getImageUrl(image)"
                       [alt]="product.name"
                       class="w-full h-16 object-cover rounded-lg border-2 cursor-pointer transition-all"
                       [class.border-blue-500]="selectedImage === image"
@@ -233,3 +241,160 @@
 </div>
 
 <p-toast />
+
+<!-- Barcode Modal -->
+<!-- Barcode Modal -->
+<p-dialog 
+  header="Print Barcode" 
+  [(visible)]="showBarcodeModal" 
+  [modal]="true"
+  [style]="{ width: '550px' }"
+  [draggable]="false"
+  [resizable]="false"
+  (onHide)="closeBarcodeModal()"
+>
+  <div class="space-y-4">
+    <!-- Hidden canvas for barcode generation -->
+    <canvas #barcodeCanvas style="display: none;"></canvas>
+
+    <!-- Barcode Preview -->
+    <div class="bg-white p-6 rounded-lg border-2 border-gray-200 flex justify-center items-center min-h-[200px]">
+      @if (barcodePreviewUrl()) {
+        <img 
+          [src]="barcodePreviewUrl()" 
+          alt="Barcode Preview"
+          class="max-w-full h-auto"
+          [style.maxHeight.px]="barcodeHeight() + 60"
+        />
+      } @else {
+        <canvas #barcodePreview width="400" [style.height.px]="barcodeHeight() + 60"></canvas>
+      }
+    </div>
+
+    <!-- Barcode Settings -->
+    <div class="space-y-3">
+      <h3 class="font-semibold text-gray-700">Barcode Settings</h3>
+      
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">Format</label>
+          <p-select 
+            [(ngModel)]="barcodeFormat" 
+            (onChange)="onBarcodeFormatChange()"
+            [options]="[
+              { label: 'CODE128', value: 'CODE128' },
+              { label: 'CODE39', value: 'CODE39' },
+              { label: 'EAN-13', value: 'EAN13' },
+              { label: 'UPC', value: 'UPC' }
+            ]"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="w-full"
+          />
+        </div>
+        
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">Copies</label>
+          <p-inputNumber 
+            [(ngModel)]="printCopies" 
+            [min]="1" 
+            [max]="100"
+            styleClass="w-full"
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">Line Width</label>
+          <p-inputNumber 
+            [(ngModel)]="barcodeWidth" 
+            [min]="1" 
+            [max]="5"
+            [step]="0.5"
+            (onInput)="onBarcodeSizeChange()"
+            styleClass="w-full"
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">Height (px)</label>
+          <p-inputNumber 
+            [(ngModel)]="barcodeHeight" 
+            [min]="50" 
+            [max]="200"
+            [step]="10"
+            (onInput)="onBarcodeSizeChange()"
+            styleClass="w-full"
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">Font Size</label>
+          <p-inputNumber 
+            [(ngModel)]="barcodeFontSize" 
+            [min]="8" 
+            [max]="24"
+            (onInput)="onBarcodeSizeChange()"
+            styleClass="w-full"
+          />
+        </div>
+      </div>
+
+      <!-- Options -->
+      <div class="flex flex-wrap items-center gap-4 mt-2">
+        <div class="flex items-center gap-2">
+          <p-checkbox 
+            [(ngModel)]="showProductName" 
+            [binary]="true" 
+            inputId="showName"
+          />
+          <label for="showName" class="text-sm text-gray-600 cursor-pointer">Show Product Name</label>
+        </div>
+        <div class="flex items-center gap-2">
+          <p-checkbox 
+            [(ngModel)]="showPrice" 
+            [binary]="true" 
+            inputId="showPrice"
+          />
+          <label for="showPrice" class="text-sm text-gray-600 cursor-pointer">Show Price</label>
+        </div>
+      </div>
+
+      <!-- Barcode Info -->
+      <div class="bg-blue-50 p-4 rounded-lg">
+        <div class="flex items-start gap-3">
+          <i class="pi pi-info-circle text-blue-600 text-xl mt-0.5"></i>
+          <div>
+            <p class="text-sm text-blue-900 font-medium mb-1">Barcode: {{ product()?.barcode }}</p>
+            <p class="text-xs text-blue-700">
+              This barcode will be printed on labels. Make sure your printer is configured correctly with label paper.
+              <br>Recommended label size: 2" x 1" (50mm x 25mm)
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex justify-end gap-2 pt-4 border-t border-gray-200">
+      <p-button 
+        label="Cancel" 
+        severity="secondary" 
+        [text]="true"
+        (onClick)="closeBarcodeModal()"
+      />
+      <p-button 
+        label="Download PNG" 
+        icon="pi pi-download"
+        severity="info"
+        [outlined]="true"
+        (onClick)="downloadBarcode()"
+      />
+      <p-button 
+        label="Print" 
+        icon="pi pi-print"
+        severity="success"
+        (onClick)="printBarcode()"
+      />
+    </div>
+  </div>
+</p-dialog>

@@ -1,234 +1,331 @@
 <div class="space-y-6">
-      <!-- Header -->
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900">Products</h1>
-          <p class="text-gray-600">Manage your product inventory and pricing</p>
-        </div>
-        <p-button 
-          *ngIf="authService.hasAnyRole(['admin', 'manager'])"
-          label="Add Product" 
-          icon="pi pi-plus" 
-          [routerLink]="['/products', 'new']"
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Products</h1>
+      <p class="text-gray-600">Manage your product inventory and pricing</p>
+    </div>
+    <div class="flex gap-2">
+      <p-button 
+        icon="pi pi-refresh" 
+        severity="secondary" 
+        [text]="true" 
+        (onClick)="refreshProducts()"
+        [loading]="loading()"
+        pTooltip="Refresh"
+        tooltipPosition="top"
+      />
+      <p-button 
+        *ngIf="authService.hasAnyRole(['admin', 'manager'])"
+        label="Add Product" 
+        icon="pi pi-plus" 
+        [routerLink]="['/products', 'new']"
+      />
+    </div>
+  </div>
+
+  <!-- Filters Card -->
+  <p-card>
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+      <!-- Search -->
+      <div class="md:col-span-5">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Search Products</label>
+        <span class="p-input-icon-left w-full">
+          <i class="pi pi-search"></i>
+          <input 
+            type="text" 
+            pInputText 
+            [ngModel]="searchTerm()"
+            (input)="onSearch($event)"
+            placeholder="Search by name, SKU, or barcode..."
+            class="w-full"
+          />
+        </span>
+        <small class="text-gray-500">Type at least 2 characters to search</small>
+      </div>
+
+      <!-- Category Filter -->
+      <div class="md:col-span-3">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+        <p-select
+          [ngModel]="selectedCategory()"
+          [options]="categoryOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="All Categories"
+          (onChange)="selectedCategory.set($event.value); onCategoryChange()"
+          styleClass="w-full"
         />
       </div>
 
-      <!-- Filters & Search -->
-      <p-card>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <!-- Search -->
-          <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Search Products</label>
-            <input 
-              type="text" 
-              pInputText 
-              [(ngModel)]="searchTerm"
-              (input)="onSearch()"
-              placeholder="Search by name, SKU, or barcode..."
-              class="w-full"
-            />
-          </div>
+      <!-- Stock Filter -->
+      <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Stock Status</label>
+        <p-select
+          [ngModel]="stockFilter()"
+          [options]="stockOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="All Products"
+          (onChange)="stockFilter.set($event.value); onStockChange()"
+          styleClass="w-full"
+        />
+      </div>
 
-          <!-- Category Filter -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
-            <p-select
-              [(ngModel)]="selectedCategory"
-              [options]="categoryOptions"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="All Categories"
-              (onChange)="onFilterChange()"
-              styleClass="w-full"
-            />
-          </div>
+      <!-- Clear Filters -->
+      <div class="md:col-span-2 flex items-end">
+        <p-button 
+          label="Clear Filters"
+          icon="pi pi-filter-slash"
+          severity="secondary"
+          [text]="true"
+          (onClick)="clearFilters()"
+          [disabled]="!searchTerm() && selectedCategory() === 'all' && stockFilter() === 'all'"
+        />
+      </div>
+    </div>
+  </p-card>
 
-          <!-- Stock Filter -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Stock Status</label>
-            <p-select
-              [(ngModel)]="stockFilter"
-              [options]="stockOptions"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="All Products"
-              (onChange)="onFilterChange()"
-              styleClass="w-full"
-            />
-          </div>
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-blue-900">Total Products</p>
+          <p class="text-2xl font-bold text-blue-600">{{ summary().totalProducts || 0 }}</p>
         </div>
-
-        <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm font-medium text-blue-900">Total Products</p>
-                <p class="text-2xl font-bold text-blue-600">{{ summary().totalProducts || 0 }}</p>
-              </div>
-              <span class="text-blue-600 text-xl">📦</span>
-            </div>
-          </div>
-
-          <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm font-medium text-green-900">Stock Value</p>
-                <p class="text-2xl font-bold text-green-600">
-                  {{ (summary().totalStockValue || 0) | currency:'PKR':'symbol':'1.0-0' }}
-                </p>
-              </div>
-              <span class="text-green-600 text-xl">💰</span>
-            </div>
-          </div>
-
-          <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm font-medium text-orange-900">Low Stock</p>
-                <p class="text-2xl font-bold text-orange-600">{{ summary().lowStockCount || 0 }}</p>
-              </div>
-              <span class="text-orange-600 text-xl">⚠️</span>
-            </div>
-          </div>
-
-          <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm font-medium text-red-900">Out of Stock</p>
-                <p class="text-2xl font-bold text-red-600">{{ summary().outOfStockCount || 0 }}</p>
-              </div>
-              <span class="text-red-600 text-xl">❌</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Products Table -->
-        <p-table 
-          [value]="filteredProducts()"
-          [loading]="loading()"
-          [paginator]="true" 
-          [rows]="pagination().limit"
-          [totalRecords]="pagination().totalProducts"
-          [rowsPerPageOptions]="[10, 25, 50, 100]"
-          styleClass="p-datatable-sm"
-          (onPage)="onPageChange($event)"
-          [lazy]="true"
-          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} products"
-          [globalFilterFields]="['name','sku','barcode']"
-        >
-          <ng-template pTemplate="header">
-            <tr>
-              <th pSortableColumn="name" style="width: 20%">Product <p-sortIcon field="name" /></th>
-              <th pSortableColumn="sku" style="width: 15%">SKU <p-sortIcon field="sku" /></th>
-              <th style="width: 15%">Category</th>
-              <th pSortableColumn="stock" style="width: 10%">Stock <p-sortIcon field="stock" /></th>
-              <th pSortableColumn="costPrice" style="width: 12%">Cost <p-sortIcon field="costPrice" /></th>
-              <th pSortableColumn="mrp" style="width: 12%">MRP <p-sortIcon field="mrp" /></th>
-              <th pSortableColumn="isActive" style="width: 8%">Status <p-sortIcon field="isActive" /></th>
-              <th style="width: 8%">Actions</th>
-            </tr>
-          </ng-template>
-
-          <ng-template pTemplate="body" let-product>
-            <tr>
-              <td>
-                <div class="flex items-center space-x-3">
-                  @if (product.images && product.images.length > 0) {
-                    <img 
-                      [src]="product.images[0]" 
-                      [alt]="product.name"
-                      class="w-10 h-10 rounded-lg object-cover"
-                    />
-                  } @else {
-                    <div class="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
-                      <span class="text-gray-500 text-sm">📷</span>
-                    </div>
-                  }
-                  <div>
-                    <p class="font-semibold text-gray-900">{{ product.name }}</p>
-                    @if (product.barcode) {
-                      <p class="text-xs text-gray-500">Barcode: {{ product.barcode }}</p>
-                    }
-                  </div>
-                </div>
-              </td>
-              <td class="font-mono text-sm">{{ product.sku }}</td>
-              <td>
-                <p-tag 
-                  [value]="getCategoryName(product)" 
-                  severity="info" 
-                />
-              </td>
-              <td>
-                <div class="flex items-center space-x-2">
-                  <span class="font-semibold" 
-                    [class.text-green-600]="product.stock > product.minStockLevel"
-                    [class.text-orange-600]="product.stock > 0 && product.stock <= product.minStockLevel"
-                    [class.text-red-600]="product.stock === 0">
-                    {{ product.stock }}
-                  </span>
-                  @if (product.stock <= product.minStockLevel) {
-                    <p-tag 
-                      [value]="product.stock === 0 ? 'Out of Stock' : 'Low Stock'"
-                      [severity]="product.stock === 0 ? 'danger' : 'warn'"
-                      styleClass="text-xs"
-                    />
-                  }
-                </div>
-              </td>
-              <td class="font-semibold text-green-600">
-                {{ product.costPrice | currency:'PKR':'symbol':'1.2-2' }}
-              </td>
-              <td class="font-semibold text-blue-600">
-                {{ product.mrp | currency:'PKR':'symbol':'1.2-2' }}
-              </td>
-              <td>
-                <p-tag 
-                  [value]="product.isActive ? 'Active' : 'Inactive'" 
-                  [severity]="product.isActive ? 'success' : 'danger'" 
-                />
-              </td>
-              <td>
-                <div class="flex space-x-2">
-                  <p-button 
-                      icon="pi pi-eye" 
-                      severity="secondary" 
-                      [text]="true" 
-                      [rounded]="true"
-                      [routerLink]="['/products', product._id]"
-                    />
-                  <p-button 
-                    *ngIf="authService.hasAnyRole(['admin', 'manager'])"
-                    icon="pi pi-pencil" 
-                    severity="secondary" 
-                    [text]="true" 
-                    [rounded]="true"
-                    [routerLink]="['/products', product._id, 'edit']"
-                  />
-                  <p-button 
-                    *ngIf="authService.hasAnyRole(['admin', 'manager']) && product.isActive"
-                    icon="pi pi-trash" 
-                    severity="danger" 
-                    [text]="true" 
-                    [rounded]="true"
-                    (onClick)="confirmDelete(product)"
-                  />
-                </div>
-              </td>
-            </tr>
-          </ng-template>
-
-          <ng-template pTemplate="emptymessage">
-            <tr>
-              <td colspan="8" class="text-center py-8 text-gray-500">
-                No products found. Create your first product to get started.
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </p-card>
+        <i class="pi pi-box text-2xl text-blue-600"></i>
+      </div>
     </div>
 
-    <p-toast />
-    <p-confirmDialog />
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-green-900">Stock Value</p>
+          <p class="text-2xl font-bold text-green-600">
+            {{ (summary().totalStockValue || 0) | currency:'PKR':'symbol':'1.0-0' }}
+          </p>
+        </div>
+        <i class="pi pi-money-bill text-2xl text-green-600"></i>
+      </div>
+    </div>
+
+    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-orange-900">Low Stock</p>
+          <p class="text-2xl font-bold text-orange-600">{{ summary().lowStockCount || 0 }}</p>
+        </div>
+        <i class="pi pi-exclamation-triangle text-2xl text-orange-600"></i>
+      </div>
+    </div>
+
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-red-900">Out of Stock</p>
+          <p class="text-2xl font-bold text-red-600">{{ summary().outOfStockCount || 0 }}</p>
+        </div>
+        <i class="pi pi-times-circle text-2xl text-red-600"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Products Table with Lazy Loading -->
+  <p-card>
+    <p-table
+      #dt
+      [value]="products()"
+      [loading]="loading()"
+      [lazy]="true"
+      [paginator]="true"
+      [rows]="pagination().limit"
+      [totalRecords]="pagination().totalProducts"
+      [rowsPerPageOptions]="[10, 25, 50, 100]"
+      (onLazyLoad)="onLazyLoad($event)"
+      [first]="(pagination().currentPage - 1) * pagination().limit"
+      dataKey="_id"
+      styleClass="p-datatable-sm p-datatable-striped"
+      [showCurrentPageReport]="true"
+      currentPageReportTemplate="Showing {first} to {last} of {totalRecords} products"
+      [resizableColumns]="true"
+      columnResizeMode="expand"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th pSortableColumn="name" style="width: 25%">
+            Product <p-sortIcon field="name" />
+          </th>
+          <th pSortableColumn="sku" style="width: 15%">
+            SKU/Barcode <p-sortIcon field="sku" />
+          </th>
+          <th pSortableColumn="category" style="width: 12%">
+            Category <p-sortIcon field="category" />
+          </th>
+          <th pSortableColumn="stock" style="width: 10%">
+            Stock <p-sortIcon field="stock" />
+          </th>
+          <th pSortableColumn="costPrice" style="width: 10%">
+            Cost <p-sortIcon field="costPrice" />
+          </th>
+          <th pSortableColumn="mrp" style="width: 10%">
+            MRP <p-sortIcon field="mrp" />
+          </th>
+          <th pSortableColumn="isActive" style="width: 8%">
+            Status <p-sortIcon field="isActive" />
+          </th>
+          <th style="width: 10%">Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-product>
+        <tr>
+<!-- In the table body template, update the image section -->
+<td>
+  <div class="flex items-center space-x-3">
+    @if (product.images && product.images.length > 0) {
+<img
+  [src]="getImageUrl(product.images?.[0])"
+  class="w-12 h-12 rounded-lg object-cover"
+  loading="lazy"
+/>
+
+<div *ngIf="!product.images?.length"
+     class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+  <i class="pi pi-image text-gray-400"></i>
+</div>
+    } @else {
+      <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+        <i class="pi pi-image text-gray-400 text-xl"></i>
+      </div>
+    }
+    <div>
+      <p class="font-semibold text-gray-900 hover:text-primary-600 cursor-pointer"
+         [routerLink]="['/products', product._id]">
+        {{ product.name | slice:0:50 }}{{ product.name.length > 50 ? '...' : '' }}
+      </p>
+      @if (product.barcode) {
+        <p class="text-xs text-gray-500 font-mono">📱 {{ product.barcode }}</p>
+      }
+    </div>
+  </div>
+</td>
+ <td>
+            <span class="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+              {{ product.sku }}
+            </span>
+          </td>
+          <td>
+            <p-tag 
+              [value]="getCategoryName(product)" 
+              severity="info" 
+              styleClass="text-xs"
+            />
+          </td>
+          <td>
+            <div class="flex flex-col gap-1">
+              <span class="font-semibold" 
+                [class.text-green-600]="product.stock > product.minStockLevel"
+                [class.text-orange-600]="product.stock > 0 && product.stock <= product.minStockLevel"
+                [class.text-red-600]="product.stock === 0">
+                {{ product.stock }}
+              </span>
+              @if (product.stock <= product.minStockLevel) {
+                <p-tag 
+                  [value]="getStockStatus(product.stock, product.minStockLevel)"
+                  [severity]="getStockSeverity(product.stock, product.minStockLevel)"
+                  styleClass="text-xs"
+                />
+              }
+            </div>
+          </td>
+          <td class="font-semibold text-green-600">
+            {{ product.costPrice | currency:'PKR':'symbol':'1.0-0' }}
+          </td>
+          <td class="font-semibold text-blue-600">
+            {{ product.mrp | currency:'PKR':'symbol':'1.0-0' }}
+          </td>
+          <td>
+            <p-tag 
+              [value]="product.isActive ? 'Active' : 'Inactive'" 
+              [severity]="product.isActive ? 'success' : 'danger'" 
+            />
+          </td>
+          <td>
+            <div class="flex gap-1">
+              <p-button 
+                icon="pi pi-eye" 
+                severity="secondary" 
+                [text]="true" 
+                [rounded]="true"
+                [routerLink]="['/products', product._id]"
+                pTooltip="View Details"
+                tooltipPosition="top"
+              />
+              <p-button 
+                *ngIf="authService.hasAnyRole(['admin', 'manager'])"
+                icon="pi pi-pencil" 
+                severity="secondary" 
+                [text]="true" 
+                [rounded]="true"
+                [routerLink]="['/products', product._id, 'edit']"
+                pTooltip="Edit Product"
+                tooltipPosition="top"
+              />
+              <p-button 
+                *ngIf="authService.hasAnyRole(['admin', 'manager']) && product.isActive"
+                icon="pi pi-trash" 
+                severity="danger" 
+                [text]="true" 
+                [rounded]="true"
+                (onClick)="confirmDelete(product)"
+                pTooltip="Delete Product"
+                tooltipPosition="top"
+              />
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="8" class="text-center py-12">
+            <div class="flex flex-col items-center gap-3">
+              <i class="pi pi-box text-5xl text-gray-300"></i>
+              <p class="text-gray-500 text-lg">No products found</p>
+              <p class="text-gray-400 text-sm">
+                @if (searchTerm() || selectedCategory() !== 'all' || stockFilter() !== 'all') {
+                  Try adjusting your filters
+                } @else {
+                  Create your first product to get started
+                }
+              </p>
+              @if (!searchTerm() && selectedCategory() === 'all' && stockFilter() === 'all' && authService.hasAnyRole(['admin', 'manager'])) {
+                <p-button 
+                  label="Add Product" 
+                  icon="pi pi-plus" 
+                  [routerLink]="['/products', 'new']"
+                />
+              }
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <!-- Loading Template -->
+      <ng-template pTemplate="loadingbody">
+        <tr>
+          <td colspan="8">
+            <div class="flex items-center justify-center py-8">
+              <i class="pi pi-spin pi-spinner text-2xl text-primary-600 mr-2"></i>
+              <span>Loading products...</span>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+
+  <p-toast position="top-right" />
+  <p-confirmDialog />
+</div>
