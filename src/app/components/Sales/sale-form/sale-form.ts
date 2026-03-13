@@ -1,4 +1,4 @@
-// sale-form.component.ts - Fixed with proper type handling for bargaining
+// sale-form.component.ts - Add camera scanning
 import { Component, computed, inject, OnInit, signal, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { SaleService } from '../../../services/sales/sale-service';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -13,7 +13,9 @@ import { PAYMENT_METHODS } from '../../../utils/constants';
 import { UtilsModule } from '../../../utils.module';
 import { CommonModule } from '@angular/common';
 import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
-
+import { BarcodeFormat } from '@zxing/library';
+import { ZXingScannerComponent } from '@zxing/ngx-scanner';
+import { ZXingScannerModule, } from '@zxing/ngx-scanner';
 // Extended Product type with temporary sale price for UI
 interface ProductWithTempPrice extends Product {
   tempSalePrice?: number;
@@ -21,7 +23,8 @@ interface ProductWithTempPrice extends Product {
 
 @Component({
   selector: 'app-sale-form',
-  imports: [UtilsModule, CommonModule],
+  standalone: true,
+  imports: [UtilsModule, CommonModule,ZXingScannerModule,],
   templateUrl: './sale-form.html',
   styleUrls: ['./sale-form.css'],
   providers: [ConfirmationService, MessageService]
@@ -38,13 +41,18 @@ export class SaleForm implements OnInit, AfterViewInit {
 
   @ViewChild('barcodeInput') barcodeInput!: ElementRef;
   @ViewChild('quantityInput') quantityInput!: ElementRef;
+  @ViewChild('scanner') scanner!: ZXingScannerComponent;
 
   // State signals
   loading = signal(false);
   barcodeMode = signal(true);
   scanning = signal(false);
+  cameraEnabled = signal(false);
+  torchEnabled = signal(false);
   searchTerm = signal('');
   searchLoading = signal(false);
+  availableCameras: MediaDeviceInfo[] = [];
+selectedCamera: MediaDeviceInfo | undefined = undefined;
   
   // Data sources
   customers = signal<Customer[]>([]);
@@ -71,6 +79,17 @@ export class SaleForm implements OnInit, AfterViewInit {
   
   // Search
   private searchSubject = new Subject<string>();
+
+  // Barcode formats to scan
+  allowedFormats = [
+    BarcodeFormat.CODE_39,
+    BarcodeFormat.CODE_128,
+    BarcodeFormat.EAN_13,
+    BarcodeFormat.EAN_8,
+    BarcodeFormat.UPC_A,
+    BarcodeFormat.UPC_E,
+    BarcodeFormat.QR_CODE
+  ];
 
   // Computed values
   subtotal = computed(() => {
@@ -217,12 +236,59 @@ export class SaleForm implements OnInit, AfterViewInit {
     });
   }
 
-  // BARCODE SCANNING METHODS
+  // CAMERA SCANNING METHODS
 
-  onBarcodeEntered(event: any): void {
-    const barcode = event.target.value.trim();
-    if (!barcode) return;
+  openCamera(): void {
+    this.cameraEnabled.set(true);
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Camera Opening',
+      detail: 'Please allow camera access to scan barcodes',
+      life: 3000
+    });
+  }
 
+  closeCamera(): void {
+    this.cameraEnabled.set(false);
+    this.torchEnabled.set(false);
+  }
+
+  toggleTorch(): void {
+    this.torchEnabled.set(!this.torchEnabled());
+  }
+
+  onCamerasFound(cameras: MediaDeviceInfo[]): void {
+    this.availableCameras = cameras;
+    // Prefer back camera for mobile
+    const backCamera = cameras.find(camera => 
+      camera.label.toLowerCase().includes('back') || 
+      camera.label.toLowerCase().includes('rear')
+    );
+    this.selectedCamera = backCamera || cameras[0] || null;
+  }
+
+  onCameraSelected(camera: MediaDeviceInfo): void {
+    this.selectedCamera = camera;
+  }
+
+  onScanSuccess(result: string): void {
+    // Stop scanning after successful scan
+    this.cameraEnabled.set(false);
+    
+    // Process the scanned barcode
+    this.processBarcode(result);
+  }
+
+  onScanError(error: any): void {
+    console.error('Scan error:', error);
+    this.messageService.add({
+      severity: 'error',
+      summary: 'Scan Error',
+      detail: 'Failed to scan barcode. Please try again.'
+    });
+  }
+
+  processBarcode(barcode: string): void {
     this.scanning.set(true);
     
     this.productService.getProductByBarcode(barcode).subscribe({
@@ -236,7 +302,6 @@ export class SaleForm implements OnInit, AfterViewInit {
             detail: `${product.name} is not available for sale`
           });
           this.scanning.set(false);
-          this.clearBarcodeInput();
           return;
         }
 
@@ -247,7 +312,6 @@ export class SaleForm implements OnInit, AfterViewInit {
             detail: `${product.name} is out of stock`
           });
           this.scanning.set(false);
-          this.clearBarcodeInput();
           return;
         }
 
@@ -261,6 +325,14 @@ export class SaleForm implements OnInit, AfterViewInit {
         // Focus quantity input for bargaining
         setTimeout(() => this.quantityInput?.nativeElement?.focus(), 100);
         this.scanning.set(false);
+
+        // Success message
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Barcode Scanned',
+          detail: `${product.name} found`,
+          life: 2000
+        });
       },
       error: (error) => {
         console.error('Barcode lookup error:', error);
@@ -271,9 +343,17 @@ export class SaleForm implements OnInit, AfterViewInit {
         });
         this.currentProduct.set(null);
         this.scanning.set(false);
-        this.clearBarcodeInput();
       }
     });
+  }
+
+  // MANUAL BARCODE INPUT
+
+  onBarcodeEntered(event: any): void {
+    const barcode = event.target.value.trim();
+    if (!barcode) return;
+    this.processBarcode(barcode);
+    event.target.value = ''; // Clear input after processing
   }
 
   // Validate price for bargaining
@@ -361,7 +441,6 @@ export class SaleForm implements OnInit, AfterViewInit {
     this.currentProduct.set(null);
     this.currentQuantity.set(1);
     this.priceError.set('');
-    this.clearBarcodeInput();
   }
 
   addToCart(product: Product, quantity: number, unitSalePrice: number = product.mrp): void {
@@ -404,7 +483,7 @@ export class SaleForm implements OnInit, AfterViewInit {
       }
       
       updatedCart[existingItemIndex].quantity = newQuantity;
-      updatedCart[existingItemIndex].unitSalePrice = unitSalePrice; // Update price for bargaining
+      updatedCart[existingItemIndex].unitSalePrice = unitSalePrice;
       updatedCart[existingItemIndex].total = newQuantity * unitSalePrice;
       updatedCart[existingItemIndex].profit = (unitSalePrice - product.costPrice) * newQuantity;
       
@@ -434,13 +513,6 @@ export class SaleForm implements OnInit, AfterViewInit {
       detail: `${quantity}x ${product.name} at ${this.formatCurrency(unitSalePrice)} (Profit: ${this.formatCurrency(profitAmount)} | ${profitMargin}%)`,
       life: 3000
     });
-  }
-
-  clearBarcodeInput(): void {
-    if (this.barcodeInput) {
-      this.barcodeInput.nativeElement.value = '';
-      setTimeout(() => this.barcodeInput.nativeElement.focus(), 100);
-    }
   }
 
   formatCurrency(value: number): string {
@@ -474,7 +546,6 @@ export class SaleForm implements OnInit, AfterViewInit {
       item.profit = (item.unitSalePrice - product.costPrice) * newQuantity;
       this.cart.set(updatedCart);
       
-      // Show updated profit
       const profitAmount = item.profit;
       const profitMargin = ((item.unitSalePrice - product.costPrice) / product.costPrice * 100).toFixed(1);
       
@@ -492,7 +563,6 @@ export class SaleForm implements OnInit, AfterViewInit {
     const item = updatedCart[index];
     const product = item.product;
 
-    // Validate price for bargaining
     const priceError = this.validatePrice(product, newPrice);
     if (priceError) {
       this.messageService.add({
@@ -510,7 +580,6 @@ export class SaleForm implements OnInit, AfterViewInit {
       item.profit = (newPrice - product.costPrice) * item.quantity;
       this.cart.set(updatedCart);
       
-      // Show price change impact
       const priceDiff = newPrice - oldPrice;
       const profitDiff = priceDiff * item.quantity;
       const profitMargin = ((newPrice - product.costPrice) / product.costPrice * 100).toFixed(1);
@@ -572,7 +641,7 @@ export class SaleForm implements OnInit, AfterViewInit {
       tempSalePrice: product.mrp
     });
     this.currentQuantity.set(1);
-    this.barcodeMode.set(true); // Switch back to barcode mode
+    this.barcodeMode.set(true);
     setTimeout(() => this.quantityInput?.nativeElement?.focus(), 100);
   }
 
@@ -639,7 +708,6 @@ export class SaleForm implements OnInit, AfterViewInit {
 
     this.saleService.createSale(saleData).subscribe({
       next: (response) => {
-        // Calculate total profit for the sale
         const totalProfit = this.totalProfit();
         const profitMargin = (totalProfit / (this.subtotal() - this.discount()) * 100).toFixed(1);
         
@@ -667,7 +735,6 @@ export class SaleForm implements OnInit, AfterViewInit {
   }
 
   printReceipt(sale: any): void {
-    // Implement receipt printing logic here
     console.log('Printing receipt for sale:', sale.invoiceNumber);
   }
 
@@ -701,12 +768,10 @@ export class SaleForm implements OnInit, AfterViewInit {
     }
   }
 
-  // Helper to get price range for display
   getPriceRange(product: Product): string {
     return `${this.formatCurrency(product.minSalePrice)} - ${this.formatCurrency(product.mrp)}`;
   }
 
-  // Helper to check if price is within range
   isPriceInRange(product: Product, price: number): boolean {
     return price >= product.minSalePrice && price <= product.mrp;
   }

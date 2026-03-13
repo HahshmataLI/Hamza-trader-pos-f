@@ -180,35 +180,103 @@
       </div>
 
       <!-- Barcode Scanner Mode -->
-      @if (barcodeMode()) {
-        <div class="p-4 border-b">
-          <h3 class="font-semibold mb-2">Scan Barcode</h3>
-          <div class="space-y-4">
-            <!-- Barcode Input -->
-            <div>
-              <label class="block text-sm text-gray-600 mb-1">Barcode</label>
-              <input
-                #barcodeInput
-                type="text"
-                pInputText
-                class="w-full font-mono"
-                placeholder="Scan or type barcode..."
-                (keyup.enter)="onBarcodeEntered($event)"
-                [disabled]="scanning()"
-              />
-            </div>
+    <!-- Update the Barcode Scanner Mode section in your sale-form.html -->
 
-            <!-- Camera Scanner Button (Future) -->
-            <p-button 
-              label="Open Camera Scanner" 
-              icon="pi pi-camera" 
-              severity="secondary"
-              styleClass="w-full"
-              [disabled]="true"
-            />
+<!-- Barcode Scanner Mode -->
+@if (barcodeMode()) {
+  <div class="p-4 border-b">
+    <h3 class="font-semibold mb-2">Scan Barcode</h3>
+    <div class="space-y-4">
+      <!-- Manual Barcode Input -->
+      <div>
+        <label class="block text-sm text-gray-600 mb-1">Manual Entry</label>
+        <input
+          #barcodeInput
+          type="text"
+          pInputText
+          class="w-full font-mono"
+          placeholder="Type or scan barcode..."
+          (keyup.enter)="onBarcodeEntered($event)"
+          [disabled]="scanning() || cameraEnabled()"
+        />
+      </div>
+
+      <!-- Camera Scanner Toggle -->
+      <div class="flex gap-2">
+        @if (!cameraEnabled()) {
+          <p-button 
+            label="Open Camera Scanner" 
+            icon="pi pi-camera" 
+            severity="primary"
+            styleClass="w-full"
+            (onClick)="openCamera()"
+            [loading]="scanning()"
+          />
+        } @else {
+          <p-button 
+            label="Close Camera" 
+            icon="pi pi-times" 
+            severity="secondary"
+            styleClass="flex-1"
+            (onClick)="closeCamera()"
+          />
+          <p-button 
+            [icon]="torchEnabled() ? 'pi pi-sun' : 'pi pi-moon'" 
+            severity="secondary"
+            styleClass="p-button-rounded"
+            (onClick)="toggleTorch()"
+            pTooltip="Toggle Flashlight"
+          />
+        }
+      </div>
+
+      <!-- Camera Scanner View -->
+      @if (cameraEnabled()) {
+        <div class="relative border-2 border-blue-500 rounded-lg overflow-hidden bg-black">
+<zxing-scanner
+  #scanner
+  [formats]="allowedFormats"
+  [enable]="cameraEnabled()"
+  [device]="selectedCamera"
+  (camerasFound)="onCamerasFound($event)"
+  (scanSuccess)="onScanSuccess($event)"
+  (scanError)="onScanError($event)"
+  (deviceChange)="onCameraSelected($event)"
+  class="w-full h-64"
+></zxing-scanner>
+          
+          <!-- Scanner Overlay -->
+          <div class="absolute inset-0 pointer-events-none border-2 border-blue-500 m-4 rounded-lg"></div>
+          
+          <!-- Scanner Status -->
+          <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-2 flex justify-between">
+            <span>Scanning...</span>
+            @if (availableCameras.length > 1) {
+             <select 
+  class="bg-transparent text-white text-xs border-none outline-none"
+  (change)="onCameraSelected(availableCameras[+$any($event.target).value])"
+>
+  <option *ngFor="let camera of availableCameras; index as i" [value]="i" [selected]="selectedCamera?.deviceId === camera.deviceId">
+    {{ camera.label || 'Camera ' + (i + 1) }}
+  </option>
+</select>
+            }
           </div>
         </div>
       }
+
+      <!-- Recent Scans (Optional) -->
+      @if (currentProduct()) {
+        <div class="bg-green-50 border border-green-200 rounded-lg p-2 text-sm">
+          <div class="flex items-center gap-2">
+            <i class="pi pi-check-circle text-green-600"></i>
+            <span class="text-green-800">Last scanned: {{ currentProduct()?.name }}</span>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+}
 
       <!-- Search Mode -->
       @if (!barcodeMode()) {
