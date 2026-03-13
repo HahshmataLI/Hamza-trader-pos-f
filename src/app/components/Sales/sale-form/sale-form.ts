@@ -1,4 +1,5 @@
-import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
+// sale-form.component.ts - Fixed with proper type handling for bargaining
+import { Component, computed, inject, OnInit, signal, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { SaleService } from '../../../services/sales/sale-service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { CustomerService } from '../../../services/customer/customer-service';
@@ -7,20 +8,25 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../services/auth';
 import { Customer } from '../../../interfaces/customer.Interface';
 import { Product } from '../../../interfaces/product.interface';
-import { CreateSaleRequest } from '../../../interfaces/sale.Interface';
+import { CartItem, CreateSaleRequest, CreateSaleItem } from '../../../interfaces/sale.Interface';
 import { PAYMENT_METHODS } from '../../../utils/constants';
 import { UtilsModule } from '../../../utils.module';
 import { CommonModule } from '@angular/common';
+import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
+
+// Extended Product type with temporary sale price for UI
+interface ProductWithTempPrice extends Product {
+  tempSalePrice?: number;
+}
 
 @Component({
   selector: 'app-sale-form',
-  imports: [UtilsModule,CommonModule],
+  imports: [UtilsModule, CommonModule],
   templateUrl: './sale-form.html',
-  styleUrl: './sale-form.css',
+  styleUrls: ['./sale-form.css'],
   providers: [ConfirmationService, MessageService]
-
 })
-export class SaleForm  implements OnInit {
+export class SaleForm implements OnInit, AfterViewInit {
   private saleService = inject(SaleService);
   private customerService = inject(CustomerService);
   private productService = inject(ProductService);
@@ -30,42 +36,97 @@ export class SaleForm  implements OnInit {
   private router = inject(Router);
   authService = inject(AuthService);
 
+  @ViewChild('barcodeInput') barcodeInput!: ElementRef;
+  @ViewChild('quantityInput') quantityInput!: ElementRef;
+
+  // State signals
   loading = signal(false);
+  barcodeMode = signal(true);
+  scanning = signal(false);
+  searchTerm = signal('');
+  searchLoading = signal(false);
   
   // Data sources
   customers = signal<Customer[]>([]);
   products = signal<Product[]>([]);
   filteredProducts = signal<Product[]>([]);
+  
+  // Cart state
+  cart = signal<CartItem[]>([]);
+  
+  // Form state
+  customer = signal<string>('');
+  paymentMethod = signal<string>(PAYMENT_METHODS.CASH);
+  discount = signal<number>(0);
+  taxAmount = signal<number>(0);
+  notes = signal<string>('');
+  
+  // New item being added - using extended type with temp price
+  currentBarcode = signal<string>('');
+  currentQuantity = signal<number>(1);
+  currentProduct = signal<ProductWithTempPrice | null>(null);
+  
+  // Price validation for bargaining
+  priceError = signal<string>('');
+  
+  // Search
+  private searchSubject = new Subject<string>();
 
-  // Form model
-  formData = signal<CreateSaleRequest>({
-    customer: '',
-    items: [],
-    paymentMethod: PAYMENT_METHODS.CASH,
-    discount: 0,
-    taxAmount: 0,
-    notes: ''
-  });
-
-  // New item form
-  newItem = signal({
-    product: '',
-    quantity: 1,
-    unitSalePrice: 0
-  });
-
-  // Computed properties
+  // Computed values
   subtotal = computed(() => {
-    return this.formData().items.reduce((total, item) => total + (item.quantity * item.unitSalePrice), 0);
+    return this.cart().reduce((total, item) => total + (item.quantity * item.unitSalePrice), 0);
   });
 
   totalAmount = computed(() => {
-    return this.subtotal() - (this.formData().discount || 0) + (this.formData().taxAmount || 0);
+    return this.subtotal() - this.discount() + this.taxAmount();
   });
 
   totalItems = computed(() => {
-    return this.formData().items.reduce((total, item) => total + item.quantity, 0);
+    return this.cart().reduce((total, item) => total + item.quantity, 0);
   });
+
+  totalProfit = computed(() => {
+    return this.cart().reduce((total, item) => total + item.profit, 0);
+  });
+
+  // Price validation helper
+  priceRange = computed(() => {
+    const product = this.currentProduct();
+    if (!product) return null;
+    return {
+      min: product.minSalePrice,
+      max: product.mrp,
+      cost: product.costPrice,
+      current: product.tempSalePrice || product.mrp
+    };
+  });
+
+  // Preview calculations for current product
+  previewProfit = computed(() => {
+    const product = this.currentProduct();
+    const quantity = this.currentQuantity();
+    const price = product?.tempSalePrice || product?.mrp || 0;
+    
+    if (!product || quantity <= 0) return 0;
+    return (price - product.costPrice) * quantity;
+  });
+
+  previewMargin = computed(() => {
+    const product = this.currentProduct();
+    const price = product?.tempSalePrice || product?.mrp || 0;
+    
+    if (!product || product.costPrice === 0) return 0;
+    return ((price - product.costPrice) / product.costPrice * 100);
+  });
+
+  cartSummary = computed(() => ({
+    subtotal: this.subtotal(),
+    discount: this.discount(),
+    tax: this.taxAmount(),
+    total: this.totalAmount(),
+    items: this.totalItems(),
+    profit: this.totalProfit()
+  }));
 
   paymentMethodOptions = [
     { label: 'Cash', value: PAYMENT_METHODS.CASH },
@@ -75,29 +136,50 @@ export class SaleForm  implements OnInit {
   ];
 
   constructor() {
-    // Auto-update unit sale price when product changes
-    effect(() => {
-      const productId = this.newItem().product;
-      if (productId) {
-        const product = this.products().find(p => p._id === productId);
-        if (product) {
-          this.newItem.update(item => ({
-            ...item,
-            unitSalePrice: product.mrp // Default to MRP, can be negotiated
-          }));
-        }
+    // Setup search with debounce
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap(term => {
+        this.searchLoading.set(true);
+        return this.productService.getProducts({ 
+          search: term,
+          limit: 10
+        });
+      })
+    ).subscribe({
+      next: (response) => {
+        const products = (response.data as Product[]).filter(p => p.isActive && p.stock > 0);
+        this.filteredProducts.set(products);
+        this.searchLoading.set(false);
+      },
+      error: (error) => {
+        console.error('Search error:', error);
+        this.searchLoading.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Search Failed',
+          detail: 'Failed to search products'
+        });
       }
     });
+  }
+
+  ngAfterViewInit(): void {
+    setTimeout(() => {
+      if (this.barcodeInput) {
+        this.barcodeInput.nativeElement.focus();
+      }
+    }, 500);
   }
 
   ngOnInit(): void {
     this.loadCustomers();
     this.loadProducts();
 
-    // Check for customer query parameter
     const customerId = this.route.snapshot.queryParamMap.get('customer');
     if (customerId) {
-      this.formData.update(data => ({ ...data, customer: customerId }));
+      this.customer.set(customerId);
     }
   }
 
@@ -107,6 +189,7 @@ export class SaleForm  implements OnInit {
         this.customers.set(response.data);
       },
       error: (error) => {
+        console.error('Customer load error:', error);
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
@@ -117,13 +200,14 @@ export class SaleForm  implements OnInit {
   }
 
   loadProducts(): void {
-    this.productService.getProducts().subscribe({
+    this.productService.getProducts({ limit: 100 }).subscribe({
       next: (response) => {
         const products = (response.data as Product[]).filter(p => p.isActive && p.stock > 0);
         this.products.set(products);
         this.filteredProducts.set(products);
       },
       error: (error) => {
+        console.error('Product load error:', error);
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
@@ -133,35 +217,156 @@ export class SaleForm  implements OnInit {
     });
   }
 
-  // Fix: Add missing getSelectedCustomer method
-  getSelectedCustomer(): Customer | undefined {
-    const customerId = this.formData().customer;
-    if (!customerId) return undefined;
-    return this.customers().find(c => c._id === customerId);
+  // BARCODE SCANNING METHODS
+
+  onBarcodeEntered(event: any): void {
+    const barcode = event.target.value.trim();
+    if (!barcode) return;
+
+    this.scanning.set(true);
+    
+    this.productService.getProductByBarcode(barcode).subscribe({
+      next: (response) => {
+        const product = response.data;
+        
+        if (!product.isActive) {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Product Inactive',
+            detail: `${product.name} is not available for sale`
+          });
+          this.scanning.set(false);
+          this.clearBarcodeInput();
+          return;
+        }
+
+        if (product.stock <= 0) {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Out of Stock',
+            detail: `${product.name} is out of stock`
+          });
+          this.scanning.set(false);
+          this.clearBarcodeInput();
+          return;
+        }
+
+        // Set current product with temp price
+        this.currentProduct.set({
+          ...product,
+          tempSalePrice: product.mrp
+        });
+        this.currentQuantity.set(1);
+        
+        // Focus quantity input for bargaining
+        setTimeout(() => this.quantityInput?.nativeElement?.focus(), 100);
+        this.scanning.set(false);
+      },
+      error: (error) => {
+        console.error('Barcode lookup error:', error);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Product Not Found',
+          detail: `No product found with barcode: ${barcode}`
+        });
+        this.currentProduct.set(null);
+        this.scanning.set(false);
+        this.clearBarcodeInput();
+      }
+    });
   }
 
-addItem(): void {
-    const item = this.newItem();
-    if (!item.product || item.quantity <= 0 || item.unitSalePrice < 0) {
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Validation Error',
-        detail: 'Please fill all item fields correctly'
-      });
-      return;
+  // Validate price for bargaining
+  validatePrice(product: Product, price: number): string | null {
+    if (price < product.minSalePrice) {
+      return `Price cannot be below minimum: ${this.formatCurrency(product.minSalePrice)}`;
     }
+    if (price > product.mrp) {
+      return `Price cannot exceed MRP: ${this.formatCurrency(product.mrp)}`;
+    }
+    return null;
+  }
 
-    const product = this.products().find(p => p._id === item.product);
-    if (!product) {
+  // Update temp price for current product (for bargaining)
+  updateTempPrice(price: number): void {
+    const product = this.currentProduct();
+    if (!product) return;
+    
+    const priceError = this.validatePrice(product, price);
+    if (priceError) {
+      this.priceError.set(priceError);
+    } else {
+      this.priceError.set('');
+      this.currentProduct.set({
+        ...product,
+        tempSalePrice: price
+      });
+    }
+  }
+
+  // Quick price buttons for bargaining
+  setMinPrice(): void {
+    const product = this.currentProduct();
+    if (product) {
+      this.currentProduct.set({
+        ...product,
+        tempSalePrice: product.minSalePrice
+      });
+      this.priceError.set('');
+    }
+  }
+
+  setMaxPrice(): void {
+    const product = this.currentProduct();
+    if (product) {
+      this.currentProduct.set({
+        ...product,
+        tempSalePrice: product.mrp
+      });
+      this.priceError.set('');
+    }
+  }
+
+  setAveragePrice(): void {
+    const product = this.currentProduct();
+    if (product) {
+      const avgPrice = (product.minSalePrice + product.mrp) / 2;
+      this.currentProduct.set({
+        ...product,
+        tempSalePrice: avgPrice
+      });
+      this.priceError.set('');
+    }
+  }
+
+  addCurrentProductWithQuantity(): void {
+    const product = this.currentProduct();
+    const quantity = this.currentQuantity();
+    const price = product?.tempSalePrice ?? product?.mrp ?? 0;
+    
+    if (!product) return;
+    
+    // Validate price
+    const priceError = this.validatePrice(product, price);
+    if (priceError) {
       this.messageService.add({
         severity: 'error',
-        summary: 'Error',
-        detail: 'Selected product not found'
+        summary: 'Invalid Price',
+        detail: priceError
       });
       return;
     }
 
-    if (item.quantity > product.stock) {
+    this.addToCart(product, quantity, price);
+    this.currentProduct.set(null);
+    this.currentQuantity.set(1);
+    this.priceError.set('');
+    this.clearBarcodeInput();
+  }
+
+  addToCart(product: Product, quantity: number, unitSalePrice: number = product.mrp): void {
+    // Validate stock
+    if (quantity > product.stock) {
       this.messageService.add({
         severity: 'error',
         summary: 'Insufficient Stock',
@@ -170,27 +375,25 @@ addItem(): void {
       return;
     }
 
-    if (item.unitSalePrice < product.minSalePrice) {
-      const minPriceFormatted = new Intl.NumberFormat('en-PK', {
-        style: 'currency',
-        currency: 'PKR',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }).format(product.minSalePrice);
-      
+    // Validate price for bargaining
+    const priceError = this.validatePrice(product, unitSalePrice);
+    if (priceError) {
       this.messageService.add({
         severity: 'error',
         summary: 'Invalid Price',
-        detail: `Sale price cannot be below minimum: ${minPriceFormatted}`
+        detail: priceError
       });
       return;
     }
 
-    const currentItems = [...this.formData().items];
-    const existingItemIndex = currentItems.findIndex(i => i.product === item.product);
-
+    // Check if product already in cart
+    const existingItemIndex = this.cart().findIndex(item => item.product._id === product._id);
+    
     if (existingItemIndex > -1) {
-      const newQuantity = currentItems[existingItemIndex].quantity + item.quantity;
+      // Update existing item
+      const updatedCart = [...this.cart()];
+      const newQuantity = updatedCart[existingItemIndex].quantity + quantity;
+      
       if (newQuantity > product.stock) {
         this.messageService.add({
           severity: 'error',
@@ -199,140 +402,260 @@ addItem(): void {
         });
         return;
       }
-      currentItems[existingItemIndex].quantity = newQuantity;
-      currentItems[existingItemIndex].unitSalePrice = item.unitSalePrice;
+      
+      updatedCart[existingItemIndex].quantity = newQuantity;
+      updatedCart[existingItemIndex].unitSalePrice = unitSalePrice; // Update price for bargaining
+      updatedCart[existingItemIndex].total = newQuantity * unitSalePrice;
+      updatedCart[existingItemIndex].profit = (unitSalePrice - product.costPrice) * newQuantity;
+      
+      this.cart.set(updatedCart);
     } else {
-      currentItems.push({ ...item });
+      // Add new item
+      const newItem: CartItem = {
+        product,
+        quantity,
+        unitSalePrice,
+        unitMrp: product.mrp,
+        total: quantity * unitSalePrice,
+        profit: (unitSalePrice - product.costPrice) * quantity,
+        isValid: true
+      };
+      
+      this.cart.set([...this.cart(), newItem]);
     }
 
-    this.formData.set({
-      ...this.formData(),
-      items: currentItems
-    });
-
-    this.newItem.set({
-      product: '',
-      quantity: 1,
-      unitSalePrice: 0
-    });
-  }
-
-  removeItem(index: number): void {
-    const currentItems = [...this.formData().items];
-    currentItems.splice(index, 1);
-    this.formData.set({
-      ...this.formData(),
-      items: currentItems
-    });
-  }
-
-  // Fix: Add missing updateItemQuantity method
-  updateItemQuantity(index: number, quantity: number): void {
-    const currentItems = [...this.formData().items];
-    const product = this.products().find(p => p._id === currentItems[index].product);
+    // Show success message with price info
+    const profitAmount = (unitSalePrice - product.costPrice) * quantity;
+    const profitMargin = ((unitSalePrice - product.costPrice) / product.costPrice * 100).toFixed(1);
     
-    if (product && quantity > product.stock) {
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Added to Cart',
+      detail: `${quantity}x ${product.name} at ${this.formatCurrency(unitSalePrice)} (Profit: ${this.formatCurrency(profitAmount)} | ${profitMargin}%)`,
+      life: 3000
+    });
+  }
+
+  clearBarcodeInput(): void {
+    if (this.barcodeInput) {
+      this.barcodeInput.nativeElement.value = '';
+      setTimeout(() => this.barcodeInput.nativeElement.focus(), 100);
+    }
+  }
+
+  formatCurrency(value: number): string {
+    return new Intl.NumberFormat('en-PK', {
+      style: 'currency',
+      currency: 'PKR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value);
+  }
+
+  // CART MANAGEMENT METHODS
+
+  updateQuantity(index: number, newQuantity: number): void {
+    const updatedCart = [...this.cart()];
+    const item = updatedCart[index];
+    const product = item.product;
+
+    if (newQuantity > product.stock) {
       this.messageService.add({
         severity: 'error',
         summary: 'Insufficient Stock',
-        detail: `Only ${product.stock} units available for ${product.name}`
+        detail: `Only ${product.stock} units available`
       });
       return;
     }
 
-    if (quantity > 0) {
-      currentItems[index].quantity = quantity;
-      this.formData.set({
-        ...this.formData(),
-        items: currentItems
+    if (newQuantity > 0) {
+      item.quantity = newQuantity;
+      item.total = newQuantity * item.unitSalePrice;
+      item.profit = (item.unitSalePrice - product.costPrice) * newQuantity;
+      this.cart.set(updatedCart);
+      
+      // Show updated profit
+      const profitAmount = item.profit;
+      const profitMargin = ((item.unitSalePrice - product.costPrice) / product.costPrice * 100).toFixed(1);
+      
+      this.messageService.add({
+        severity: 'info',
+        summary: 'Quantity Updated',
+        detail: `New profit: ${this.formatCurrency(profitAmount)} (${profitMargin}%)`,
+        life: 2000
       });
     }
   }
 
-  // Fix: Add missing updateItemPrice method
-updateItemPrice(index: number, price: number): void {
-    const currentItems = [...this.formData().items];
-    const product = this.products().find(p => p._id === currentItems[index].product);
-    
-    if (product && price < product.minSalePrice) {
-      const minPriceFormatted = new Intl.NumberFormat('en-PK', {
-        style: 'currency',
-        currency: 'PKR',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }).format(product.minSalePrice);
-      
+  updatePrice(index: number, newPrice: number): void {
+    const updatedCart = [...this.cart()];
+    const item = updatedCart[index];
+    const product = item.product;
+
+    // Validate price for bargaining
+    const priceError = this.validatePrice(product, newPrice);
+    if (priceError) {
       this.messageService.add({
         severity: 'error',
         summary: 'Invalid Price',
-        detail: `Sale price cannot be below minimum: ${minPriceFormatted}`
+        detail: priceError
       });
       return;
     }
 
-    if (price >= 0) {
-      currentItems[index].unitSalePrice = price;
-      this.formData.set({
-        ...this.formData(),
-        items: currentItems
+    if (newPrice >= 0) {
+      const oldPrice = item.unitSalePrice;
+      item.unitSalePrice = newPrice;
+      item.total = item.quantity * newPrice;
+      item.profit = (newPrice - product.costPrice) * item.quantity;
+      this.cart.set(updatedCart);
+      
+      // Show price change impact
+      const priceDiff = newPrice - oldPrice;
+      const profitDiff = priceDiff * item.quantity;
+      const profitMargin = ((newPrice - product.costPrice) / product.costPrice * 100).toFixed(1);
+      
+      this.messageService.add({
+        severity: priceDiff >= 0 ? 'info' : 'warn',
+        summary: 'Price Updated',
+        detail: `New price: ${this.formatCurrency(newPrice)} (${profitDiff >= 0 ? '+' : ''}${this.formatCurrency(profitDiff)} profit) | Margin: ${profitMargin}%`,
+        life: 3000
       });
     }
   }
 
-  getProductName(productId: string): string {
-    const product = this.products().find(p => p._id === productId);
-    return product ? product.name : 'Unknown Product';
-  }
-
-  getProductStock(productId: string): number {
-    const product = this.products().find(p => p._id === productId);
-    return product ? product.stock : 0;
-  }
-
-  getProductMrp(productId: string): number {
-    const product = this.products().find(p => p._id === productId);
-    return product ? product.mrp : 0;
-  }
-
-  getProductMinPrice(productId: string): number {
-    const product = this.products().find(p => p._id === productId);
-    return product ? product.minSalePrice : 0;
-  }
-
-  getItemTotal(item: any): number {
-    return item.quantity * item.unitSalePrice;
-  }
-
-  clearAllItems(): void {
-    this.formData.set({
-      ...this.formData(),
-      items: []
+  removeItem(index: number): void {
+    const updatedCart = [...this.cart()];
+    updatedCart.splice(index, 1);
+    this.cart.set(updatedCart);
+    
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Item Removed',
+      detail: 'Item removed from cart',
+      life: 2000
     });
   }
+
+  clearCart(): void {
+    if (this.cart().length > 0) {
+      this.confirmationService.confirm({
+        message: 'Are you sure you want to clear all items from cart?',
+        header: 'Confirm Clear',
+        icon: 'pi pi-exclamation-triangle',
+        accept: () => {
+          this.cart.set([]);
+          this.messageService.add({
+            severity: 'info',
+            summary: 'Cart Cleared',
+            detail: 'All items removed from cart'
+          });
+        }
+      });
+    }
+  }
+
+  // SEARCH METHODS
+
+  onSearch(term: string): void {
+    this.searchTerm.set(term);
+    if (term.trim().length >= 2) {
+      this.searchSubject.next(term);
+    } else {
+      this.filteredProducts.set(this.products());
+    }
+  }
+
+  selectProductFromSearch(product: Product): void {
+    this.currentProduct.set({
+      ...product,
+      tempSalePrice: product.mrp
+    });
+    this.currentQuantity.set(1);
+    this.barcodeMode.set(true); // Switch back to barcode mode
+    setTimeout(() => this.quantityInput?.nativeElement?.focus(), 100);
+  }
+
+  // DISCOUNT METHODS
+
+  applyDiscountPercentage(percentage: number): void {
+    const discountAmount = (this.subtotal() * percentage) / 100;
+    this.discount.set(discountAmount);
+    
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Discount Applied',
+      detail: `${percentage}% discount (${this.formatCurrency(discountAmount)}) applied`,
+      life: 2000
+    });
+  }
+
+  applyFixedDiscount(amount: number): void {
+    if (amount <= this.subtotal()) {
+      this.discount.set(amount);
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Discount Applied',
+        detail: `${this.formatCurrency(amount)} discount applied`,
+        life: 2000
+      });
+    } else {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Invalid Discount',
+        detail: 'Discount cannot exceed subtotal'
+      });
+    }
+  }
+
+  // SUBMIT METHODS
 
   onSubmit(): void {
     if (!this.isFormValid()) {
       this.messageService.add({
         severity: 'warn',
         summary: 'Validation Error',
-        detail: 'Please add at least one item to create sale'
+        detail: 'Please add at least one item to cart'
       });
       return;
     }
 
     this.loading.set(true);
 
-    this.saleService.createSale(this.formData()).subscribe({
+    const saleItems: CreateSaleItem[] = this.cart().map(item => ({
+      product: item.product._id,
+      quantity: item.quantity,
+      unitSalePrice: item.unitSalePrice
+    }));
+
+    const saleData: CreateSaleRequest = {
+      customer: this.customer() || undefined,
+      items: saleItems,
+      paymentMethod: this.paymentMethod() as any,
+      discount: this.discount(),
+      taxAmount: this.taxAmount(),
+      notes: this.notes()
+    };
+
+    this.saleService.createSale(saleData).subscribe({
       next: (response) => {
+        // Calculate total profit for the sale
+        const totalProfit = this.totalProfit();
+        const profitMargin = (totalProfit / (this.subtotal() - this.discount()) * 100).toFixed(1);
+        
         this.messageService.add({
           severity: 'success',
           summary: 'Success',
-          detail: 'Sale created successfully'
+          detail: `Sale completed! Total: ${this.formatCurrency(this.totalAmount())} | Profit: ${this.formatCurrency(totalProfit)} (${profitMargin}%)`
         });
+        
+        this.printReceipt(response.data);
+        
         this.loading.set(false);
-        this.router.navigate(['/sales']);
+        this.router.navigate(['/sales', response.data._id]);
       },
       error: (error) => {
+        console.error('Sale creation error:', error);
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
@@ -343,14 +666,19 @@ updateItemPrice(index: number, price: number): void {
     });
   }
 
+  printReceipt(sale: any): void {
+    // Implement receipt printing logic here
+    console.log('Printing receipt for sale:', sale.invoiceNumber);
+  }
+
   isFormValid(): boolean {
-    return this.formData().items.length > 0;
+    return this.cart().length > 0;
   }
 
   onCancel(): void {
-    if (this.formData().items.length > 0) {
+    if (this.cart().length > 0) {
       this.confirmationService.confirm({
-        message: 'You have unsaved changes. Are you sure you want to cancel?',
+        message: 'You have items in cart. Are you sure you want to cancel?',
         header: 'Confirm Cancel',
         icon: 'pi pi-exclamation-triangle',
         accept: () => this.router.navigate(['/sales'])
@@ -360,21 +688,26 @@ updateItemPrice(index: number, price: number): void {
     }
   }
 
-  applyDiscount(percentage: number): void {
-    const discountAmount = (this.subtotal() * percentage) / 100;
-    this.formData.update(data => ({
-      ...data,
-      discount: discountAmount
-    }));
+  getSelectedCustomer(): Customer | undefined {
+    const customerId = this.customer();
+    if (!customerId) return undefined;
+    return this.customers().find(c => c._id === customerId);
   }
 
-  calculateProfit(item: any): number {
-    const product = this.products().find(p => p._id === item.product);
-    if (!product) return 0;
-    return (item.unitSalePrice - product.costPrice) * item.quantity;
+  toggleMode(): void {
+    this.barcodeMode.set(!this.barcodeMode());
+    if (this.barcodeMode()) {
+      setTimeout(() => this.barcodeInput?.nativeElement?.focus(), 100);
+    }
   }
 
-  getTotalProfit(): number {
-    return this.formData().items.reduce((total, item) => total + this.calculateProfit(item), 0);
+  // Helper to get price range for display
+  getPriceRange(product: Product): string {
+    return `${this.formatCurrency(product.minSalePrice)} - ${this.formatCurrency(product.mrp)}`;
+  }
+
+  // Helper to check if price is within range
+  isPriceInRange(product: Product, price: number): boolean {
+    return price >= product.minSalePrice && price <= product.mrp;
   }
 }

@@ -1,9 +1,10 @@
-<div class="space-y-6">
+<!-- sale-form.html - Enhanced POS-style layout with bargaining support -->
+<div class="h-full flex flex-col">
   <!-- Header -->
-  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+  <div class="bg-white border-b px-6 py-4 flex justify-between items-center">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Create New Sale</h1>
-      <p class="text-gray-600">Process a new sale with product selection and pricing</p>
+      <h1 class="text-2xl font-bold text-gray-900">Point of Sale</h1>
+      <p class="text-gray-600">Scan barcode or search products to add to cart</p>
     </div>
     <div class="flex gap-2">
       <p-button 
@@ -13,7 +14,7 @@
         (onClick)="onCancel()"
       />
       <p-button 
-        [label]="loading() ? 'Processing...' : 'Complete Sale'" 
+        [label]="loading() ? 'Processing...' : 'Complete Sale (F8)'" 
         icon="pi pi-check" 
         severity="success"
         (onClick)="onSubmit()"
@@ -23,331 +24,476 @@
     </div>
   </div>
 
-  <!-- Form -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- Main Form -->
-    <div class="lg:col-span-2 space-y-6">
-      <!-- Customer & Payment -->
-      <p-card header="Customer & Payment Information">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- Customer -->
-          <div class="field">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Customer</label>
-            <p-select
-              [(ngModel)]="formData().customer"
-              [options]="customers()"
-              optionLabel="name"
-              optionValue="_id"
-              placeholder="Select Customer (Optional)"
-              [showClear]="true"
-              styleClass="w-full"
-            >
-              <ng-template pTemplate="selectedItem">
-                <div class="flex items-center" *ngIf="formData().customer; else customerPlaceholder">
-                  @if (getSelectedCustomer()) {
-                    <div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center mr-2">
-                      <span class="text-white text-xs font-bold">{{ getSelectedCustomer()!.name.charAt(0) }}</span>
-                    </div>
-                    <span>{{ getSelectedCustomer()!.name }}</span>
-                  }
-                </div>
-                <ng-template #customerPlaceholder>
-                  <div class="text-gray-500">Walk-in Customer</div>
-                </ng-template>
-              </ng-template>
-            </p-select>
-            <small class="text-gray-500">Leave empty for walk-in customers</small>
-          </div>
-
-          <!-- Payment Method -->
-          <div class="field">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
-            <p-select
-              [(ngModel)]="formData().paymentMethod"
-              [options]="paymentMethodOptions"
-              optionLabel="label"
-              optionValue="value"
-              styleClass="w-full"
-            />
-          </div>
+  <!-- Main POS Area -->
+  <div class="flex-1 flex overflow-hidden">
+    <!-- Left Side - Cart -->
+    <div class="flex-1 flex flex-col overflow-hidden border-r">
+      <!-- Cart Header -->
+      <div class="bg-gray-50 px-6 py-3 border-b flex justify-between items-center">
+        <div class="flex items-center space-x-4">
+          <h2 class="font-semibold">Shopping Cart</h2>
+          <span class="text-sm text-gray-600">{{ totalItems() }} items</span>
+          <span class="text-sm font-medium text-green-600">Profit: {{ totalProfit() | currency:'PKR':'symbol':'1.0-0' }}</span>
         </div>
-      </p-card>
+        <p-button 
+          label="Clear Cart" 
+          icon="pi pi-trash" 
+          severity="danger" 
+          [text]="true"
+          [disabled]="cart().length === 0"
+          (onClick)="clearCart()"
+        />
+      </div>
 
-      <!-- Add Products -->
-      <p-card header="Add Products to Sale">
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
-          <!-- Product -->
-          <div class="field md:col-span-2">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Product</label>
-            <p-select
-              [(ngModel)]="newItem().product"
-              [options]="filteredProducts()"
-              optionLabel="name"
-              optionValue="_id"
-              placeholder="Select Product"
-              styleClass="w-full"
-            >
-              <ng-template let-product pTemplate="item">
-                <div class="flex justify-between items-center">
-                  <span>{{ product.name }}</span>
-                  <span class="text-sm text-gray-500">Stock: {{ product.stock }}</span>
-                </div>
-              </ng-template>
-            </p-select>
-          </div>
-
-          <!-- Quantity -->
-          <div class="field">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Qty</label>
-            <p-inputNumber
-              [(ngModel)]="newItem().quantity"
-              [min]="1"
-              [max]="getProductStock(newItem().product)"
-              mode="decimal"
-              styleClass="w-full"
-            />
-          </div>
-
-          <!-- Unit Price -->
-          <div class="field">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Unit Price</label>
-            <p-inputNumber
-              [(ngModel)]="newItem().unitSalePrice"
-              [min]="getProductMinPrice(newItem().product)"
-              mode="currency"
-              currency="PKR"
-              locale="en-PK"
-              styleClass="w-full"
-            />
-          </div>
-
-          <!-- Add Button -->
-          <div class="field flex items-end">
-            <p-button 
-              label="Add" 
-              icon="pi pi-plus" 
-              styleClass="w-full"
-              (onClick)="addItem()"
-            />
-          </div>
-        </div>
-
-        <!-- Product Info -->
-        @if (newItem().product) {
-          <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-            <div class="grid grid-cols-3 gap-4 text-sm">
-              <div>
-                <span class="font-medium">MRP:</span>
-                {{ getProductMrp(newItem().product) | currency:'PKR':'symbol':'1.2-2' }}
-              </div>
-              <div>
-                <span class="font-medium">Min Price:</span>
-                {{ getProductMinPrice(newItem().product) | currency:'PKR':'symbol':'1.2-2' }}
-              </div>
-              <div>
-                <span class="font-medium">Available:</span>
-                {{ getProductStock(newItem().product) }} units
-              </div>
-            </div>
-          </div>
-        }
-      </p-card>
-
-      <!-- Sale Items -->
-      <p-card header="Sale Items">
-        @if (formData().items.length === 0) {
-          <div class="text-center py-8 text-gray-500">
-            <i class="pi pi-shopping-cart text-4xl mb-4"></i>
-            <p>No items added yet</p>
-            <p class="text-sm">Add products to create your sale</p>
+      <!-- Cart Items -->
+      <div class="flex-1 overflow-y-auto p-6">
+        @if (cart().length === 0) {
+          <div class="h-full flex flex-col items-center justify-center text-gray-400">
+            <i class="pi pi-shopping-cart text-6xl mb-4"></i>
+            <p class="text-lg">Cart is empty</p>
+            <p class="text-sm">Scan barcode or search products to begin</p>
           </div>
         } @else {
-          <p-table [value]="formData().items" styleClass="p-datatable-sm">
-            <ng-template pTemplate="header">
-              <tr>
-                <th style="width: 30%">Product</th>
-                <th style="width: 15%">Qty</th>
-                <th style="width: 15%">Unit Price</th>
-                <th style="width: 15%">Total</th>
-                <th style="width: 15%">Profit</th>
-                <th style="width: 10%">Actions</th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-item let-index="rowIndex">
-              <tr>
-                <td>
-                  <div class="font-medium">{{ getProductName(item.product) }}</div>
-                  <div class="text-xs text-gray-500">
-                    MRP: {{ getProductMrp(item.product) | currency:'PKR':'symbol':'1.2-2' }}
-                  </div>
-                </td>
-                <td>
-                  <p-inputNumber
-                    [(ngModel)]="formData().items[index].quantity"
-                    [min]="1"
-                    [max]="getProductStock(item.product)"
-                    mode="decimal"
-                    styleClass="w-full"
-                    (onInput)="updateItemQuantity(index, formData().items[index].quantity)"
-                  />
-                </td>
-                <td>
-                  <p-inputNumber
-                    [(ngModel)]="formData().items[index].unitSalePrice"
-                    [min]="getProductMinPrice(item.product)"
-                    mode="currency"
-                    currency="PKR"
-                    locale="en-PK"
-                    styleClass="w-full"
-                    (onInput)="updateItemPrice(index, formData().items[index].unitSalePrice)"
-                  />
-                </td>
-                <td class="font-semibold text-green-600">
-                  {{ getItemTotal(item) | currency:'PKR':'symbol':'1.2-2' }}
-                </td>
-                <td class="font-semibold" [class.text-green-600]="calculateProfit(item) > 0" [class.text-red-600]="calculateProfit(item) < 0">
-                  {{ calculateProfit(item) | currency:'PKR':'symbol':'1.2-2' }}
-                </td>
-                <td>
-                  <p-button 
-                    icon="pi pi-trash" 
-                    severity="danger" 
-                    [text]="true" 
-                    [rounded]="true"
-                    (onClick)="removeItem(index)"
-                    pTooltip="Remove item"
-                  />
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
-        }
-      </p-card>
+          <div class="space-y-4">
+            @for (item of cart(); track item.product._id; let i = $index) {
+              <div class="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div class="flex justify-between items-start">
+                  <div class="flex-1">
+                    <div class="flex items-start justify-between">
+                      <div>
+                        <h3 class="font-semibold text-lg">{{ item.product.name }}</h3>
+                        <p class="text-sm text-gray-500">SKU: {{ item.product.sku }}</p>
+                        <div class="flex items-center space-x-2 mt-1">
+                          <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                            MRP: {{ item.unitMrp | currency:'PKR':'symbol':'1.0-0' }}
+                          </span>
+                          <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                            Min: {{ item.product.minSalePrice | currency:'PKR':'symbol':'1.0-0' }}
+                          </span>
+                          <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                            Cost: {{ item.product.costPrice | currency:'PKR':'symbol':'1.0-0' }}
+                          </span>
+                        </div>
+                      </div>
+                      <p-button 
+                        icon="pi pi-trash" 
+                        severity="danger" 
+                        [text]="true" 
+                        [rounded]="true"
+                        (onClick)="removeItem(i)"
+                      />
+                    </div>
+                    
+                    <div class="grid grid-cols-5 gap-4 mt-4">
+                      <!-- Quantity -->
+                      <div>
+                        <label class="block text-xs text-gray-500 mb-1">Quantity</label>
+                        <p-inputNumber
+                          [(ngModel)]="item.quantity"
+                          [min]="1"
+                          [max]="item.product.stock"
+                          mode="decimal"
+                          styleClass="w-full"
+                          (onInput)="updateQuantity(i, item.quantity)"
+                        />
+                      </div>
+                      
+                      <!-- Unit Price -->
+                      <div>
+                        <label class="block text-xs text-gray-500 mb-1">Sale Price</label>
+                        <p-inputNumber
+                          [(ngModel)]="item.unitSalePrice"
+                          [min]="item.product.minSalePrice"
+                          [max]="item.product.mrp"
+                          mode="currency"
+                          currency="PKR"
+                          locale="en-PK"
+                          styleClass="w-full"
+                          (onInput)="updatePrice(i, item.unitSalePrice)"
+                          [class.ng-invalid]="item.unitSalePrice < item.product.minSalePrice || item.unitSalePrice > item.product.mrp"
+                        />
+                        @if (item.unitSalePrice < item.product.minSalePrice) {
+                          <small class="text-red-500">Below minimum!</small>
+                        }
+                        @if (item.unitSalePrice > item.product.mrp) {
+                          <small class="text-red-500">Above MRP!</small>
+                        }
+                      </div>
+                      
+                      <!-- Total -->
+                      <div>
+                        <label class="block text-xs text-gray-500 mb-1">Total</label>
+                        <div class="text-lg font-bold text-green-600">
+                          {{ item.total | currency:'PKR':'symbol':'1.0-0' }}
+                        </div>
+                      </div>
+                      
+                      <!-- Profit -->
+                      <div>
+                        <label class="block text-xs text-gray-500 mb-1">Profit</label>
+                        <div class="text-sm font-semibold" 
+                             [class.text-green-600]="item.profit > 0"
+                             [class.text-red-600]="item.profit < 0">
+                          {{ item.profit | currency:'PKR':'symbol':'1.0-0' }}
+                        </div>
+                      </div>
 
-      <!-- Notes -->
-      <p-card header="Additional Information">
-        <div class="field">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-          <textarea
-            pInputTextarea
-            [(ngModel)]="formData().notes"
-            placeholder="Any additional notes about this sale..."
-            [rows]="3"
-            class="w-full"
-          ></textarea>
-        </div>
-      </p-card>
+                      <!-- Margin -->
+                      <div>
+                        <label class="block text-xs text-gray-500 mb-1">Margin</label>
+                        <div class="text-sm font-semibold text-blue-600">
+                          {{ ((item.unitSalePrice - item.product.costPrice) / item.product.costPrice * 100).toFixed(1) }}%
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
     </div>
 
-    <!-- Sidebar -->
-    <div class="space-y-6">
-      <!-- Order Summary -->
-      <p-card header="Order Summary">
-        <div class="space-y-3">
-          <div class="flex justify-between">
-            <span class="text-gray-600">Items:</span>
-            <span class="font-medium">{{ formData().items.length }}</span>
+    <!-- Right Side - Controls -->
+    <div class="w-96 bg-gray-50 flex flex-col overflow-y-auto">
+      <!-- Mode Toggle -->
+      <div class="p-4 border-b">
+        <div class="flex rounded-lg bg-gray-200 p-1">
+          <button 
+            class="flex-1 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center"
+            [class.bg-white]="barcodeMode()"
+            [class.text-blue-600]="barcodeMode()"
+            (click)="toggleMode()"
+          >
+            <i class="pi pi-qrcode mr-2"></i>Scan
+          </button>
+          <button 
+            class="flex-1 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center"
+            [class.bg-white]="!barcodeMode()"
+            [class.text-blue-600]="!barcodeMode()"
+            (click)="toggleMode()"
+          >
+            <i class="pi pi-search mr-2"></i>Search
+          </button>
+        </div>
+      </div>
+
+      <!-- Barcode Scanner Mode -->
+      @if (barcodeMode()) {
+        <div class="p-4 border-b">
+          <h3 class="font-semibold mb-2">Scan Barcode</h3>
+          <div class="space-y-4">
+            <!-- Barcode Input -->
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">Barcode</label>
+              <input
+                #barcodeInput
+                type="text"
+                pInputText
+                class="w-full font-mono"
+                placeholder="Scan or type barcode..."
+                (keyup.enter)="onBarcodeEntered($event)"
+                [disabled]="scanning()"
+              />
+            </div>
+
+            <!-- Camera Scanner Button (Future) -->
+            <p-button 
+              label="Open Camera Scanner" 
+              icon="pi pi-camera" 
+              severity="secondary"
+              styleClass="w-full"
+              [disabled]="true"
+            />
           </div>
-          <div class="flex justify-between">
-            <span class="text-gray-600">Total Units:</span>
-            <span class="font-medium">{{ totalItems() }}</span>
+        </div>
+      }
+
+      <!-- Search Mode -->
+      @if (!barcodeMode()) {
+        <div class="p-4 border-b">
+          <h3 class="font-semibold mb-2">Search Products</h3>
+          <div class="space-y-4">
+            <div class="relative">
+              <i class="pi pi-search absolute left-3 top-3 text-gray-400"></i>
+              <input
+                type="text"
+                pInputText
+                class="w-full pl-10"
+                placeholder="Search by name, SKU, or barcode..."
+                [ngModel]="searchTerm()"
+                (ngModelChange)="onSearch($event)"
+              />
+              @if (searchLoading()) {
+                <i class="pi pi-spinner pi-spin absolute right-3 top-3 text-gray-400"></i>
+              }
+            </div>
+
+            @if (searchTerm() && filteredProducts().length > 0) {
+              <div class="max-h-80 overflow-y-auto border rounded-lg bg-white divide-y">
+                @for (product of filteredProducts(); track product._id) {
+                  <div 
+                    class="p-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                    (click)="selectProductFromSearch(product)"
+                  >
+                    <div class="font-medium">{{ product.name }}</div>
+                    <div class="text-xs text-gray-500 grid grid-cols-2 gap-2 mt-1">
+                      <span>SKU: {{ product.sku }}</span>
+                      <span>Stock: {{ product.stock }}</span>
+                      <span class="text-blue-600">MRP: {{ product.mrp | currency:'PKR':'symbol':'1.0-0' }}</span>
+                      <span class="text-green-600">Min: {{ product.minSalePrice | currency:'PKR':'symbol':'1.0-0' }}</span>
+                    </div>
+                    @if (product.barcode) {
+                      <div class="text-xs text-gray-400 mt-1">
+                        <i class="pi pi-qrcode mr-1"></i> {{ product.barcode }}
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+            @if (searchTerm() && filteredProducts().length === 0 && !searchLoading()) {
+              <div class="text-center py-4 text-gray-500">
+                <i class="pi pi-search text-2xl mb-2"></i>
+                <p>No products found matching "{{ searchTerm() }}"</p>
+              </div>
+            }
           </div>
-          <div class="flex justify-between">
-            <span class="text-gray-600">Subtotal:</span>
-            <span class="font-medium">{{ subtotal() | currency:'PKR':'symbol':'1.2-2' }}</span>
-          </div>
-          
-          <!-- Discount -->
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-  <span class="text-gray-600">Discount:</span>
-  <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-2 w-full sm:w-auto">
+        </div>
+      }
+
+      <!-- Quantity & Price Input (when product selected) -->
+      @if (currentProduct()) {
+        <div class="p-4 border-b bg-blue-50">
+          <h3 class="font-semibold mb-2 text-blue-900">Add to Cart</h3>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-sm font-medium text-blue-800">{{ currentProduct()?.name }}</span>
+                <div class="text-xs text-blue-600 mt-1">
+                  <span class="mr-2">Stock: {{ currentProduct()?.stock }}</span>
+                  <span class="mr-2">MRP: {{ currentProduct()?.mrp | currency:'PKR':'symbol':'1.0-0' }}</span>
+                  <span>Min: {{ currentProduct()?.minSalePrice | currency:'PKR':'symbol':'1.0-0' }}</span>
+                </div>
+              </div>
+            </div>
+            
+           <!-- Updated section for Quantity & Price Input with proper bindings -->
+<div class="space-y-3">
+  <div>
+    <label class="block text-xs text-gray-600 mb-1">Quantity</label>
+    <div class="flex gap-2">
+      <p-inputNumber
+        #quantityInput
+        [(ngModel)]="currentQuantity"
+        [min]="1"
+        [max]="currentProduct()?.stock || 1"
+        mode="decimal"
+        styleClass="flex-1"
+      />
+      <div class="flex space-x-1">
+        <button class="w-8 h-8 border rounded hover:bg-gray-100" (click)="currentQuantity.set(currentQuantity() + 1)">+</button>
+        <button class="w-8 h-8 border rounded hover:bg-gray-100" (click)="currentQuantity.set(currentQuantity() > 1 ? currentQuantity() - 1 : 1)">-</button>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <label class="block text-xs text-gray-600 mb-1">Sale Price (for bargaining)</label>
     <p-inputNumber
-      [(ngModel)]="formData().discount"
-      [min]="0"
-      [max]="subtotal()"
+      [ngModel]="currentProduct()?.tempSalePrice || currentProduct()?.mrp"
+      (ngModelChange)="updateTempPrice($event)"
+      [min]="currentProduct()?.minSalePrice || 0"
+      [max]="currentProduct()?.mrp || 0"
       mode="currency"
       currency="PKR"
       locale="en-PK"
-      styleClass="w-full sm:w-32"
+      styleClass="w-full"
     />
-    <div class="flex space-x-1 mt-2 sm:mt-0 justify-end sm:justify-start">
-      <p-button 
-        icon="pi pi-percentage" 
-        [text]="true" 
-        size="small"
-        (onClick)="applyDiscount(5)"
-        pTooltip="5% Discount"
-      />
-      <p-button 
-        icon="pi pi-percentage" 
-        [text]="true" 
-        size="small"
-        (onClick)="applyDiscount(10)"
-        pTooltip="10% Discount"
-      />
+    @if (priceError()) {
+      <small class="text-red-500 block mt-1">{{ priceError() }}</small>
+    }
+    <div class="flex justify-between text-xs mt-1">
+      <span class="text-green-600">Min: {{ currentProduct()?.minSalePrice | currency:'PKR':'symbol':'1.0-0' }}</span>
+      <span class="text-blue-600">Max: {{ currentProduct()?.mrp | currency:'PKR':'symbol':'1.0-0' }}</span>
     </div>
   </div>
-</div>
 
-          <!-- Tax -->
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-  <span class="text-gray-600">Tax:</span>
-  <p-inputNumber
-    [(ngModel)]="formData().taxAmount"
-    [min]="0"
-    mode="currency"
-    currency="PKR"
-    locale="en-PK"
-    styleClass="w-full sm:w-32"
+  <!-- Quick price buttons for bargaining -->
+  <div class="grid grid-cols-3 gap-2">
+    <button class="text-xs p-1 border rounded hover:bg-gray-100"
+            (click)="setMinPrice()">
+      Min Price
+    </button>
+    <button class="text-xs p-1 border rounded hover:bg-gray-100"
+            (click)="setMaxPrice()">
+      MRP
+    </button>
+    <button class="text-xs p-1 border rounded hover:bg-gray-100"
+            (click)="setAveragePrice()">
+      Average
+    </button>
+  </div>
+
+  <!-- Profit preview -->
+  @if (currentProduct()) {
+    <div class="bg-white p-2 rounded text-sm">
+      <div class="flex justify-between">
+        <span>Profit per unit:</span>
+        <span class="font-semibold text-green-600">
+          {{ ((currentProduct()?.tempSalePrice || currentProduct()!.mrp) - currentProduct()!.costPrice) | currency:'PKR':'symbol':'1.0-0' }}
+        </span>
+      </div>
+      <div class="flex justify-between">
+        <span>Total profit:</span>
+        <span class="font-semibold text-green-600">
+          {{ previewProfit() | currency:'PKR':'symbol':'1.0-0' }}
+        </span>
+      </div>
+      <div class="flex justify-between">
+        <span>Margin:</span>
+        <span class="font-semibold text-blue-600">
+          {{ previewMargin().toFixed(1) }}%
+        </span>
+      </div>
+    </div>
+  }
+
+  <p-button 
+    label="Add to Cart" 
+    icon="pi pi-plus"
+    styleClass="w-full"
+    severity="success"
+    (onClick)="addCurrentProductWithQuantity()"
+    [disabled]="!currentProduct() || currentQuantity() < 1 || currentQuantity() > (currentProduct()?.stock || 0) || !!priceError()"
   />
 </div>
+          </div>
+        </div>
+      }
 
+      <!-- Customer Selection -->
+      <div class="p-4 border-b">
+        <h3 class="font-semibold mb-2">Customer</h3>
+        <p-select
+          [(ngModel)]="customer"
+          [options]="customers()"
+          optionLabel="name"
+          optionValue="_id"
+          placeholder="Walk-in Customer"
+          [showClear]="true"
+          styleClass="w-full"
+        >
+          <ng-template pTemplate="selectedItem">
+            <div class="flex items-center" *ngIf="customer(); else customerPlaceholder">
+              @if (getSelectedCustomer()) {
+                <div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center mr-2">
+                  <span class="text-white text-xs font-bold">{{ getSelectedCustomer()!.name.charAt(0) }}</span>
+                </div>
+                <span>{{ getSelectedCustomer()!.name }}</span>
+              }
+            </div>
+            <ng-template #customerPlaceholder>
+              <span class="text-gray-500">Walk-in Customer</span>
+            </ng-template>
+          </ng-template>
+        </p-select>
+      </div>
+
+      <!-- Payment Method -->
+      <div class="p-4 border-b">
+        <h3 class="font-semibold mb-2">Payment Method</h3>
+        <div class="grid grid-cols-2 gap-2">
+          @for (option of paymentMethodOptions; track option.value) {
+            <button
+              class="p-2 text-sm border rounded-lg transition-colors"
+              [class.bg-blue-600]="paymentMethod() === option.value"
+              [class.text-white]="paymentMethod() === option.value"
+              [class.border-blue-600]="paymentMethod() === option.value"
+              [class.hover:bg-gray-50]="paymentMethod() !== option.value"
+              (click)="paymentMethod.set(option.value)"
+            >
+              {{ option.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Discount -->
+      <div class="p-4 border-b">
+        <h3 class="font-semibold mb-2">Discount</h3>
+        <div class="space-y-3">
+          <p-inputNumber
+            [(ngModel)]="discount"
+            [min]="0"
+            [max]="subtotal()"
+            mode="currency"
+            currency="PKR"
+            locale="en-PK"
+            styleClass="w-full"
+          />
+          
+          <div class="grid grid-cols-3 gap-2">
+            <button class="p-2 text-sm border rounded-lg hover:bg-gray-50" (click)="applyDiscountPercentage(5)">
+              5%
+            </button>
+            <button class="p-2 text-sm border rounded-lg hover:bg-gray-50" (click)="applyDiscountPercentage(10)">
+              10%
+            </button>
+            <button class="p-2 text-sm border rounded-lg hover:bg-gray-50" (click)="applyDiscountPercentage(15)">
+              15%
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order Summary -->
+      <div class="p-4 bg-white border-t mt-auto">
+        <h3 class="font-semibold mb-3">Order Summary</h3>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-gray-600">Subtotal:</span>
+            <span>{{ subtotal() | currency:'PKR':'symbol':'1.0-0' }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Discount:</span>
+            <span class="text-red-600">-{{ discount() | currency:'PKR':'symbol':'1.0-0' }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Tax:</span>
+            <span>{{ taxAmount() | currency:'PKR':'symbol':'1.0-0' }}</span>
+          </div>
           <div class="flex justify-between text-lg font-bold border-t pt-2">
-            <span class="text-gray-800">Total Amount:</span>
-            <span class="text-green-600">{{ totalAmount() | currency:'PKR':'symbol':'1.2-2' }}</span>
+            <span>Total:</span>
+            <span class="text-green-600">{{ totalAmount() | currency:'PKR':'symbol':'1.0-0' }}</span>
           </div>
-
           <div class="flex justify-between text-sm border-t pt-2">
-            <span class="text-gray-600">Total Profit:</span>
-            <span class="font-medium text-green-600">{{ getTotalProfit() | currency:'PKR':'symbol':'1.2-2' }}</span>
+            <span class="text-gray-600">Est. Profit:</span>
+            <span class="font-medium text-green-600">{{ totalProfit() | currency:'PKR':'symbol':'1.0-0' }}</span>
+          </div>
+          <div class="flex justify-between text-xs text-gray-500">
+            <span>Avg. Margin:</span>
+            <span>{{ (totalProfit() / (subtotal() - discount()) * 100 || 0).toFixed(1) }}%</span>
           </div>
         </div>
-      </p-card>
 
-      <!-- Quick Actions -->
-      <p-card header="Quick Actions">
-        <div class="space-y-2">
-          <p-button 
-            label="Clear All Items" 
-            icon="pi pi-trash" 
-            severity="danger"
-            styleClass="w-full justify-start"
-            [disabled]="formData().items.length === 0"
-            (onClick)="clearAllItems()"
-          />
-          <p-button 
-            label="Apply 10% Discount" 
-            icon="pi pi-percentage" 
-            severity="secondary"
-            styleClass="w-full justify-start"
-            [disabled]="formData().items.length === 0"
-            (onClick)="applyDiscount(10)"
-          />
+        <!-- Notes -->
+        <div class="mt-4">
+          <label class="block text-sm text-gray-600 mb-1">Notes</label>
+          <textarea
+            pInputTextarea
+            [(ngModel)]="notes"
+            [rows]="2"
+            class="w-full"
+            placeholder="Add notes..."
+          ></textarea>
         </div>
-      </p-card>
-
-      <!-- Validation -->
-      <p-card header="Validation" *ngIf="!isFormValid()">
-        <div class="space-y-2 text-sm text-orange-600">
-          <div class="flex items-center space-x-2">
-            <i class="pi pi-exclamation-triangle"></i>
-            <span>Add at least one item to create sale</span>
-          </div>
-        </div>
-      </p-card>
+      </div>
     </div>
   </div>
 </div>
 
-<p-toast />
+<p-toast position="bottom-right" />
 <p-confirmDialog />

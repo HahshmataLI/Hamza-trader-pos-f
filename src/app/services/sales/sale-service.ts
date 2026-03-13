@@ -1,8 +1,9 @@
 import { inject, Injectable } from '@angular/core';
 import { API_URL } from '../../utils/constants';
-import { CancelSaleRequest, CreateSaleRequest, MultipleSalesResponse, ReturnSaleRequest, ReturnSaleResponse, SaleAnalyticsResponse, SaleFilters, SingleSaleResponse } from '../../interfaces/sale.Interface';
+import { CancelSaleRequest, CreateSaleRequest, MultipleSalesResponse, ReturnSaleRequest, ReturnSaleResponse, Sale, SaleAnalyticsResponse, SaleFilters, SingleSaleResponse } from '../../interfaces/sale.Interface';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { Product } from '../../interfaces/product.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -57,5 +58,23 @@ export class SaleService  {
   // Cancel sale
   cancelSale(saleId: string, cancelData: CancelSaleRequest): Observable<SingleSaleResponse> {
     return this.http.post<SingleSaleResponse>(`${this.baseUrl}/${saleId}/cancel`, cancelData);
+  }
+    // Quick product lookup by barcode
+  lookupProductByBarcode(barcode: string): Observable<{ success: boolean; data: Product }> {
+    return this.http.get<{ success: boolean; data: Product }>(
+      `${this.baseUrl}/lookup/barcode/${encodeURIComponent(barcode)}`
+    );
+  }
+
+  // Get today's sales for quick overview
+  getTodaySales(): Observable<{ success: boolean; data: { sales: Sale[]; summary: any } }> {
+    return this.http.get<{ success: boolean; data: { sales: Sale[]; summary: any } }>(
+      `${this.baseUrl}/today`
+    );
+  }
+
+  // Quick sale creation with barcode support
+  createQuickSale(saleData: CreateSaleRequest): Observable<SingleSaleResponse> {
+    return this.http.post<SingleSaleResponse>(this.baseUrl, saleData);
   }
 }
