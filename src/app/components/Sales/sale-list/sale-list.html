@@ -1,3 +1,4 @@
+<!-- sale-list.html - Updated with payment status filter -->
 <div class="space-y-6">
   <!-- Header -->
   <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -13,12 +14,81 @@
     />
   </div>
 
+  <!-- Period Analytics Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <!-- Today -->
+    <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-medium text-blue-900">Today</h3>
+        <span class="text-blue-600 text-xl">📅</span>
+      </div>
+      <div class="space-y-2">
+        <div class="flex justify-between">
+          <span class="text-xs text-blue-700">Sales:</span>
+          <span class="text-sm font-bold text-blue-900">{{ periodAnalytics()?.today?.count || 0 }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-xs text-blue-700">Revenue:</span>
+          <span class="text-sm font-bold text-blue-900">{{ formatCurrency(periodAnalytics()?.today?.revenue || 0) }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-xs text-blue-700">Profit:</span>
+          <span class="text-sm font-bold text-green-600">{{ formatCurrency(periodAnalytics()?.today?.profit || 0) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- This Week -->
+    <div class="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-4">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-medium text-purple-900">This Week</h3>
+        <span class="text-purple-600 text-xl">📊</span>
+      </div>
+      <div class="space-y-2">
+        <div class="flex justify-between">
+          <span class="text-xs text-purple-700">Sales:</span>
+          <span class="text-sm font-bold text-purple-900">{{ periodAnalytics()?.week?.count || 0 }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-xs text-purple-700">Revenue:</span>
+          <span class="text-sm font-bold text-purple-900">{{ formatCurrency(periodAnalytics()?.week?.revenue || 0) }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-xs text-purple-700">Profit:</span>
+          <span class="text-sm font-bold text-green-600">{{ formatCurrency(periodAnalytics()?.week?.profit || 0) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- This Month -->
+    <div class="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-medium text-green-900">This Month</h3>
+        <span class="text-green-600 text-xl">📈</span>
+      </div>
+      <div class="space-y-2">
+        <div class="flex justify-between">
+          <span class="text-xs text-green-700">Sales:</span>
+          <span class="text-sm font-bold text-green-900">{{ periodAnalytics()?.month?.count || 0 }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-xs text-green-700">Revenue:</span>
+          <span class="text-sm font-bold text-green-900">{{ formatCurrency(periodAnalytics()?.month?.revenue || 0) }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-xs text-green-700">Profit:</span>
+          <span class="text-sm font-bold text-green-600">{{ formatCurrency(periodAnalytics()?.month?.profit || 0) }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Analytics Cards -->
   <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-blue-900">Total Sales</p>
+          <p class="text-sm font-medium text-blue-900">Total Sales (30d)</p>
           <p class="text-2xl font-bold text-blue-600">{{ getTotalSales() }}</p>
         </div>
         <span class="text-blue-600 text-xl">📊</span>
@@ -28,7 +98,7 @@
     <div class="bg-green-50 border border-green-200 rounded-lg p-4">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-green-900">Total Revenue</p>
+          <p class="text-sm font-medium text-green-900">Total Revenue (30d)</p>
           <p class="text-2xl font-bold text-green-600">
             {{ getTotalRevenue() | currency:'PKR':'symbol':'1.0-0' }}
           </p>
@@ -40,9 +110,9 @@
     <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-purple-900">Average Sale</p>
+          <p class="text-sm font-medium text-purple-900">Total Profit (30d)</p>
           <p class="text-2xl font-bold text-purple-600">
-            {{ getAverageSale() | currency:'PKR':'symbol':'1.0-0' }}
+            {{ getTotalProfit() | currency:'PKR':'symbol':'1.0-0' }}
           </p>
         </div>
         <span class="text-purple-600 text-xl">📈</span>
@@ -52,20 +122,18 @@
     <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-orange-900">This Month</p>
-          <p class="text-2xl font-bold text-orange-600">
-            {{ analytics()?.totalDiscount || 0 | currency:'PKR':'symbol':'1.0-0' }}
-          </p>
+          <p class="text-sm font-medium text-orange-900">Pending Payments</p>
+          <p class="text-2xl font-bold text-orange-600">{{ getPendingCount() }}</p>
         </div>
-        <span class="text-orange-600 text-xl">🎯</span>
+        <span class="text-orange-600 text-xl">⏳</span>
       </div>
     </div>
   </div>
 
-  <!-- Filters & Table -->
+  <!-- Filters -->
   <p-card>
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-      <!-- Date Filters -->
+      <!-- Start Date Filter -->
       <div class="field">
         <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
         <input
@@ -77,6 +145,7 @@
         />
       </div>
 
+      <!-- End Date Filter -->
       <div class="field">
         <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
         <input
@@ -85,6 +154,32 @@
           [(ngModel)]="endDate"
           (change)="onFilterChange()"
           class="w-full"
+        />
+      </div>
+
+      <!-- Payment Status Filter -->
+      <div class="field">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Payment Status</label>
+        <p-select
+          [(ngModel)]="paymentStatusFilter"
+          [options]="paymentStatusOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Filter by status"
+          (onChange)="onFilterChange()"
+          styleClass="w-full"
+        />
+      </div>
+
+      <!-- Clear Filters -->
+      <div class="field flex items-end">
+        <p-button 
+          label="Clear Filters" 
+          icon="pi pi-filter-slash" 
+          severity="secondary"
+          styleClass="w-full"
+          (onClick)="clearFilters()"
+          [disabled]="!startDate() && !endDate() && !paymentStatusFilter()"
         />
       </div>
     </div>
@@ -104,15 +199,16 @@
     >
       <ng-template pTemplate="header">
         <tr>
-          <th pSortableColumn="invoiceNumber" style="width: 12%">Invoice # <p-sortIcon field="invoiceNumber" /></th>
-          <th style="width: 15%">Customer</th>
-          <th style="width: 10%">Items</th>
-          <th pSortableColumn="totalAmount" style="width: 12%">Total <p-sortIcon field="totalAmount" /></th>
-          <th pSortableColumn="paymentMethod" style="width: 10%">Payment <p-sortIcon field="paymentMethod" /></th>
-          <th pSortableColumn="paymentStatus" style="width: 12%">Payment Status <p-sortIcon field="paymentStatus" /></th>
-          <th pSortableColumn="status" style="width: 12%">Sale Status <p-sortIcon field="status" /></th>
-          <th pSortableColumn="saleDate" style="width: 10%">Date <p-sortIcon field="saleDate" /></th>
-          <th style="width: 7%">Actions</th>
+          <th pSortableColumn="invoiceNumber" style="width: 10%">Invoice # <p-sortIcon field="invoiceNumber" /></th>
+          <th style="width: 12%">Customer</th>
+          <th style="width: 8%">Items</th>
+          <th pSortableColumn="totalAmount" style="width: 10%">Total <p-sortIcon field="totalAmount" /></th>
+          <th style="width: 10%">Profit</th>
+          <th pSortableColumn="paymentMethod" style="width: 8%">Payment <p-sortIcon field="paymentMethod" /></th>
+          <th pSortableColumn="paymentStatus" style="width: 10%">Payment Status <p-sortIcon field="paymentStatus" /></th>
+          <th pSortableColumn="status" style="width: 10%">Sale Status <p-sortIcon field="status" /></th>
+          <th pSortableColumn="saleDate" style="width: 8%">Date <p-sortIcon field="saleDate" /></th>
+          <th style="width: 14%">Actions</th>
         </tr>
       </ng-template>
 
@@ -132,10 +228,15 @@
             </div>
           </td>
           <td class="font-semibold text-green-600">
-            {{ sale.totalAmount | currency:'PKR':'symbol':'1.2-2' }}
+            {{ sale.totalAmount | currency:'PKR':'symbol':'1.0-0' }}
             @if (sale.discount > 0) {
-              <div class="text-xs text-orange-500">-{{ sale.discount | currency:'PKR':'symbol':'1.2-2' }}</div>
+              <div class="text-xs text-orange-500">-{{ sale.discount | currency:'PKR':'symbol':'1.0-0' }}</div>
             }
+          </td>
+          <td>
+            <div class="font-semibold" [class.text-green-600]="sale.totalProfit && sale.totalProfit > 0" [class.text-red-600]="sale.totalProfit && sale.totalProfit < 0">
+              {{ sale.totalProfit || 0 | currency:'PKR':'symbol':'1.0-0' }}
+            </div>
           </td>
           <td>
             <p-tag [value]="sale.paymentMethod" severity="info" />
@@ -158,17 +259,9 @@
             </div>
           </td>
           <td>
-            <div class="flex space-x-1">
+            <div class="flex flex-wrap gap-1">
+              <!-- View Details -->
               <p-button 
-                icon="pi pi-undo" 
-                severity="secondary" 
-                [text]="true" 
-                [rounded]="true"
-                [routerLink]="['/salesReturn', sale._id]"
-                pTooltip="View details"
-                tooltipPosition="top"
-              />
-                <p-button 
                 icon="pi pi-eye" 
                 severity="secondary" 
                 [text]="true" 
@@ -177,16 +270,22 @@
                 pTooltip="View details"
                 tooltipPosition="top"
               />
-              @if (canModifySale(sale)) {
+              
+              <!-- Return (if eligible) -->
+              @if (canReturn(sale)) {
                 <p-button 
-  icon="pi pi-undo" 
-  severity="warn" 
-  [text]="true" 
-  [rounded]="true"
-  (onClick)="confirmReturn(sale)"
-  pTooltip="Process return"
-  tooltipPosition="top"
-/>
+                  icon="pi pi-undo" 
+                  severity="warn" 
+                  [text]="true" 
+                  [rounded]="true"
+                  (onClick)="confirmReturn(sale)"
+                  pTooltip="Process return"
+                  tooltipPosition="top"
+                />
+              }
+              
+              <!-- Cancel (if eligible) -->
+              @if (canCancel(sale)) {
                 <p-button 
                   icon="pi pi-times" 
                   severity="danger" 
@@ -197,6 +296,19 @@
                   tooltipPosition="top"
                 />
               }
+              
+              <!-- Mark as Paid (for credit sales) -->
+              @if (canMarkAsPaid(sale)) {
+                <p-button 
+                  icon="pi pi-check-circle" 
+                  severity="success" 
+                  [text]="true" 
+                  [rounded]="true"
+                  (onClick)="confirmMarkAsPaid(sale)"
+                  pTooltip="Mark as Paid"
+                  tooltipPosition="top"
+                />
+              }
             </div>
           </td>
         </tr>
@@ -204,7 +316,7 @@
 
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="9" class="text-center py-8 text-gray-500">
+          <td colspan="10" class="text-center py-8 text-gray-500">
             No sales found. Create your first sale to get started.
           </td>
         </tr>

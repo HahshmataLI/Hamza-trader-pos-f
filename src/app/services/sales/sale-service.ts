@@ -1,6 +1,18 @@
+// sale-service.ts - Updated with new methods
 import { inject, Injectable } from '@angular/core';
 import { API_URL } from '../../utils/constants';
-import { CancelSaleRequest, CreateSaleRequest, MultipleSalesResponse, ReturnSaleRequest, ReturnSaleResponse, Sale, SaleAnalyticsResponse, SaleFilters, SingleSaleResponse } from '../../interfaces/sale.Interface';
+import { 
+  CancelSaleRequest, 
+  CreateSaleRequest, 
+  MultipleSalesResponse, 
+  ReturnSaleRequest, 
+  ReturnSaleResponse, 
+  Sale, 
+  SaleAnalyticsResponse, 
+  SaleFilters, 
+  SingleSaleResponse,
+  PeriodAnalyticsResponse 
+} from '../../interfaces/sale.Interface';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Product } from '../../interfaces/product.interface';
@@ -13,7 +25,7 @@ export class SaleService  {
   private baseUrl = `${API_URL}/sales`;
 
   // Get all sales with optional filtering
-  getSales(filters?: SaleFilters): Observable<MultipleSalesResponse> {
+ getSales(filters?: SaleFilters): Observable<MultipleSalesResponse> {
     let params = new HttpParams();
     
     if (filters?.startDate) {
@@ -32,9 +44,13 @@ export class SaleService  {
       params = params.set('limit', filters.limit.toString());
     }
 
+    // Add payment status filter
+    if (filters?.paymentStatus) {
+      params = params.set('paymentStatus', filters.paymentStatus);
+    }
+
     return this.http.get<MultipleSalesResponse>(this.baseUrl, { params });
   }
-
   // Get single sale by ID
   getSale(id: string): Observable<SingleSaleResponse> {
     return this.http.get<SingleSaleResponse>(`${this.baseUrl}/${id}`);
@@ -50,6 +66,11 @@ export class SaleService  {
     return this.http.get<SaleAnalyticsResponse>(`${this.baseUrl}/analytics?days=${days}`);
   }
 
+  // Get period analytics (today, this week, this month)
+  getPeriodAnalytics(): Observable<PeriodAnalyticsResponse> {
+    return this.http.get<PeriodAnalyticsResponse>(`${this.baseUrl}/period-analytics`);
+  }
+
   // Return sale items
   returnSale(saleId: string, returnData: ReturnSaleRequest): Observable<ReturnSaleResponse> {
     return this.http.post<ReturnSaleResponse>(`${this.baseUrl}/${saleId}/return`, returnData);
@@ -59,7 +80,13 @@ export class SaleService  {
   cancelSale(saleId: string, cancelData: CancelSaleRequest): Observable<SingleSaleResponse> {
     return this.http.post<SingleSaleResponse>(`${this.baseUrl}/${saleId}/cancel`, cancelData);
   }
-    // Quick product lookup by barcode
+
+  // Mark credit sale as paid
+  markSaleAsPaid(saleId: string): Observable<{ success: boolean; message: string }> {
+    return this.http.patch<{ success: boolean; message: string }>(`${this.baseUrl}/${saleId}/mark-paid`, {});
+  }
+
+  // Quick product lookup by barcode
   lookupProductByBarcode(barcode: string): Observable<{ success: boolean; data: Product }> {
     return this.http.get<{ success: boolean; data: Product }>(
       `${this.baseUrl}/lookup/barcode/${encodeURIComponent(barcode)}`

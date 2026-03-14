@@ -1,7 +1,7 @@
+// sale.Interface.ts - Updated with new analytics interfaces
 import { Customer } from "./customer.Interface";
 import { Product } from "./product.interface";
 import { User } from "./user.interface";
-
 
 export interface SaleItem {
   _id?: string;
@@ -23,6 +23,7 @@ export interface Sale {
   discount: number;
   taxAmount: number;
   totalAmount: number;
+  totalProfit?: number; // Added for UI
   paymentMethod: 'Cash' | 'Card' | 'Digital' | 'Credit';
   paymentStatus: 'Pending' | 'Paid' | 'Partially Paid' | 'Refunded';
   saleDate: string;
@@ -36,13 +37,12 @@ export interface Sale {
 
 export interface CreateSaleRequest {
   customer?: string;
-  items: CreateSaleItem[];  // Updated to support barcode
+  items: CreateSaleItem[];
   paymentMethod: 'Cash' | 'Card' | 'Digital' | 'Credit';
   discount?: number;
   taxAmount?: number;
   notes?: string;
 }
-
 
 export interface ReturnSaleRequest {
   returnItems: Array<{
@@ -62,13 +62,30 @@ export interface SaleFilters {
   startDate?: string;
   endDate?: string;
   customer?: string;
+  paymentStatus?: string;
 }
 
+// Enhanced analytics interface with profit
 export interface SaleAnalytics {
   totalSales: number;
   totalRevenue: number;
   totalDiscount: number;
+  totalProfit: number;
   averageSale: number;
+  averageProfit: number;
+}
+
+// Period analytics interface
+export interface PeriodMetrics {
+  revenue: number;
+  profit: number;
+  count: number;
+}
+
+export interface PeriodAnalytics {
+  today: PeriodMetrics;
+  week: PeriodMetrics;
+  month: PeriodMetrics;
 }
 
 export interface SingleSaleResponse {
@@ -91,15 +108,21 @@ export interface SaleAnalyticsResponse {
   success: boolean;
   data: SaleAnalytics;
 }
+
+export interface PeriodAnalyticsResponse {
+  success: boolean;
+  data: PeriodAnalytics;
+}
+
 export interface CartItem {
-  product: Product;        // Full product object
+  product: Product;
   quantity: number;
   unitSalePrice: number;
   unitMrp: number;
   total: number;
   profit: number;
-  isValid: boolean;        // For validation state
-  errorMessage?: string;   // For showing errors
+  isValid: boolean;
+  errorMessage?: string;
 }
 
 export interface POSState {
@@ -114,16 +137,19 @@ export interface POSState {
   totalItems: number;
   totalProfit: number;
 }
+
 export interface ReturnSaleResponse {
   success: boolean;
   data: Sale;
   refundAmount: number;
   message: string;
 }
+
 export interface CreateSaleItem {
-  product?: string;      // Product ID (optional if barcode provided)
-  barcode?: string;      // Barcode (optional if product ID provided)
+  product?: string;
+  barcode?: string;
   quantity: number;
-  unitSalePrice?: number; // Optional - will use MRP if not provided
+  unitSalePrice?: number;
 }
+
 export type SaleResponse = SingleSaleResponse | MultipleSalesResponse;

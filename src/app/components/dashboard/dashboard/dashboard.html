@@ -1,8 +1,26 @@
+<!-- dashboard.html - Updated with new metrics -->
 <div class="dashboard-container p-4">
-  <!-- Header -->
-  <div class="mb-6">
-    <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
-    <p class="text-gray-600">Welcome to your POS management system</p>
+  <!-- Header with Date -->
+  <div class="mb-6 flex justify-between items-center">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+      <p class="text-gray-600">{{ currentDate | date:'fullDate' }}</p>
+    </div>
+    <div class="flex gap-2">
+      <p-button 
+        label="Refresh" 
+        icon="pi pi-refresh" 
+        severity="secondary"
+        (onClick)="refreshData()"
+        [loading]="loading()"
+      />
+      <p-button 
+        label="New Sale" 
+        icon="pi pi-plus" 
+        severity="success"
+        (onClick)="navigateTo('/sales/new')"
+      />
+    </div>
   </div>
 
   <!-- Loading State -->
@@ -39,36 +57,48 @@
   @if (!loading() && dashboardData(); as data) {
     <div class="space-y-6">
       
-      <!-- Key Metrics -->
+      <!-- Key Metrics Row 1 -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Today's Revenue -->
-        <p-card class="cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/sales')">
+        <p-card class="cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/sales?period=today')">
           <div class="flex justify-between items-center">
             <div>
               <p class="text-sm font-medium text-gray-600">Today's Revenue</p>
               <p class="text-2xl font-bold text-gray-900">
                 {{ formatCurrency(data.today.revenue) }}
               </p>
-              <p class="text-sm text-gray-500">
-                {{ data.today.salesCount }} sales
-              </p>
+              <div class="flex items-center gap-2 mt-1">
+                <p-tag 
+                  [value]="data.today.salesCount + ' sales'" 
+                  severity="info"
+                  styleClass="text-xs"
+                />
+                <span class="text-sm text-gray-500">
+                  {{ data.today.itemsSold }} items
+                </span>
+              </div>
             </div>
             <div class="p-3 bg-blue-100 rounded-full">
               <i class="pi pi-wallet text-blue-600 text-xl"></i>
             </div>
           </div>
+          <div class="mt-2 text-sm">
+            <span class="text-green-600 font-medium">
+              {{ formatCurrency(data.today.profit) }} profit
+            </span>
+          </div>
         </p-card>
 
-        <!-- Monthly Revenue -->
-        <p-card class="cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/sales')">
+        <!-- Today's Profit (Alternative) -->
+        <p-card class="cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/sales?period=today')">
           <div class="flex justify-between items-center">
             <div>
-              <p class="text-sm font-medium text-gray-600">Monthly Revenue</p>
-              <p class="text-2xl font-bold text-gray-900">
-                {{ formatCurrency(data.monthly.revenue) }}
+              <p class="text-sm font-medium text-gray-600">Today's Profit</p>
+              <p class="text-2xl font-bold text-green-600">
+                {{ formatCurrency(data.today.profit) }}
               </p>
               <p class="text-sm text-gray-500">
-                {{ data.monthly.salesCount }} sales
+                Margin: {{ (data.today.profit / data.today.revenue * 100 || 0).toFixed(1) }}%
               </p>
             </div>
             <div class="p-3 bg-green-100 rounded-full">
@@ -77,8 +107,26 @@
           </div>
         </p-card>
 
+        <!-- Pending Credit -->
+        <p-card class="cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/sales?status=pending')">
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Pending Credit</p>
+              <p class="text-2xl font-bold text-orange-600">
+                {{ formatCurrency(data.pendingCreditAmount.total) }}
+              </p>
+              <p class="text-sm text-gray-500">
+                {{ data.pendingCreditAmount.count }} customers
+              </p>
+            </div>
+            <div class="p-3 bg-orange-100 rounded-full">
+              <i class="pi pi-credit-card text-orange-600 text-xl"></i>
+            </div>
+          </div>
+        </p-card>
+
         <!-- Low Stock Alert -->
-        <p-card class="cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/products')">
+        <p-card class="cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/products?filter=lowstock')">
           <div class="flex justify-between items-center">
             <div>
               <p class="text-sm font-medium text-gray-600">Low Stock Items</p>
@@ -100,6 +148,34 @@
             </div>
           </div>
         </p-card>
+      </div>
+
+      <!-- Key Metrics Row 2 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Monthly Revenue -->
+        <p-card class="cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/sales?period=month')">
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="text-sm font-medium text-gray-600">This Month</p>
+              <p class="text-2xl font-bold text-gray-900">
+                {{ formatCurrency(data.month.revenue) }}
+              </p>
+              <div class="flex items-center gap-2">
+                <p-tag 
+                  [value]="data.month.salesCount + ' sales'" 
+                  severity="info"
+                  styleClass="text-xs"
+                />
+                <span class="text-sm text-green-600">
+                  {{ formatCurrency(data.month.profit) }} profit
+                </span>
+              </div>
+            </div>
+            <div class="p-3 bg-purple-100 rounded-full">
+              <i class="pi pi-calendar text-purple-600 text-xl"></i>
+            </div>
+          </div>
+        </p-card>
 
         <!-- Total Customers -->
         <p-card class="cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/customers')">
@@ -107,80 +183,151 @@
             <div>
               <p class="text-sm font-medium text-gray-600">Total Customers</p>
               <p class="text-2xl font-bold text-gray-900">
-                {{ data.customers.total }}
+                {{ data.customers.total | number }}
               </p>
               <p class="text-sm text-gray-500">
-                Active customers
+                Avg. Purchase: {{ formatCurrency(data.customers.averagePurchase) }}
               </p>
             </div>
-            <div class="p-3 bg-purple-100 rounded-full">
-              <i class="pi pi-users text-purple-600 text-xl"></i>
+            <div class="p-3 bg-indigo-100 rounded-full">
+              <i class="pi pi-users text-indigo-600 text-xl"></i>
+            </div>
+          </div>
+        </p-card>
+
+        <!-- Inventory Value -->
+        <p-card class="cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/products')">
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Inventory Value</p>
+              <p class="text-2xl font-bold text-gray-900">
+                {{ formatCurrency(data.inventory.inventoryValue) }}
+              </p>
+              <p class="text-sm text-green-600">
+                Potential: {{ formatCurrency(data.inventory.potentialProfit) }} profit
+              </p>
+            </div>
+            <div class="p-3 bg-teal-100 rounded-full">
+              <i class="pi pi-box text-teal-600 text-xl"></i>
+            </div>
+          </div>
+        </p-card>
+
+        <!-- Year to Date -->
+        <p-card class="cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/sales?period=year')">
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Year to Date</p>
+              <p class="text-2xl font-bold text-gray-900">
+                {{ formatCurrency(data.year.revenue) }}
+              </p>
+              <p class="text-sm text-green-600">
+                {{ formatCurrency(data.year.profit) }} profit
+              </p>
+            </div>
+            <div class="p-3 bg-yellow-100 rounded-full">
+              <i class="pi pi-star text-yellow-600 text-xl"></i>
             </div>
           </div>
         </p-card>
       </div>
 
-      <!-- Charts and Recent Sales -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- Sales Chart -->
-        <div class="lg:col-span-2">
-          <p-card header="Revenue Overview" class="h-full">
-            <p-chart 
-              type="bar" 
-              [data]="salesChartData()" 
-              [options]="chartOptions()"
-              height="300px">
-            </p-chart>
-          </p-card>
-        </div>
+      <!-- Charts Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Revenue Chart -->
+        <p-card header="Revenue Overview" class="h-full">
+          <p-chart 
+            type="bar" 
+            [data]="salesChartData()" 
+            [options]="chartOptions()"
+            height="300px">
+          </p-chart>
+        </p-card>
 
-        <!-- Inventory Chart -->
-        <div>
-          <p-card header="Inventory Status" class="h-full">
-            <p-chart 
-              type="doughnut" 
-              [data]="inventoryChartData()" 
-              [options]="chartOptions()"
-              height="300px">
-            </p-chart>
-            <div class="mt-4 text-center">
-              <p class="text-lg font-semibold">
-                Total Products: {{ data.products.total }}
-              </p>
-            </div>
-          </p-card>
-        </div>
+        <!-- Payment Methods Chart -->
+        <p-card header="Payment Methods" class="h-full">
+          <p-chart 
+            type="pie" 
+            [data]="paymentChartData()" 
+            [options]="paymentChartOptions()"
+            height="300px">
+          </p-chart>
+        </p-card>
       </div>
 
-      <!-- Recent Sales -->
-      <div class="grid grid-cols-1">
-        <p-card header="Recent Sales" class="w-full">
-          <p-table 
-            [value]="data.recentSales" 
-            [paginator]="false" 
-            [rows]="5"
-            styleClass="p-datatable-sm">
+      <!-- Top Products and Recent Sales -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Top Selling Products -->
+        <p-card header="Top Selling Products" class="h-full">
+          <p-table [value]="data.topProducts" [paginator]="false" styleClass="p-datatable-sm">
             <ng-template pTemplate="header">
               <tr>
-                <th>Invoice #</th>
+                <th>Product</th>
+                <th>Sold</th>
+                <th>Revenue</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-product>
+              <tr>
+                <td>
+                  <div class="flex items-center gap-2">
+                    @if (product.image) {
+                      <img [src]="product.image" class="w-8 h-8 object-cover rounded">
+                    } @else {
+                      <div class="w-8 h-8 bg-gray-200 rounded flex items-center justify-center">
+                        <i class="pi pi-box text-gray-500"></i>
+                      </div>
+                    }
+                    <span class="font-medium">{{ product.name }}</span>
+                  </div>
+                </td>
+                <td>{{ product.totalQuantity }} units</td>
+                <td class="font-semibold">{{ formatCurrency(product.totalRevenue) }}</td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+              <tr>
+                <td colspan="3" class="text-center py-4 text-gray-500">
+                  No products sold yet
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+          <div class="mt-4 text-right">
+            <p-button 
+              label="View All Products" 
+              icon="pi pi-list"
+              (onClick)="navigateTo('/products')"
+              size="small">
+            </p-button>
+          </div>
+        </p-card>
+
+        <!-- Recent Sales -->
+        <p-card header="Recent Sales" class="h-full">
+          <p-table [value]="data.recentSales" [paginator]="false" styleClass="p-datatable-sm">
+            <ng-template pTemplate="header">
+              <tr>
+                <th>Invoice</th>
                 <th>Customer</th>
-                <th>Date</th>
                 <th>Amount</th>
-                <th>Actions</th>
+                <th>Profit</th>
+                <th></th>
               </tr>
             </ng-template>
             <ng-template pTemplate="body" let-sale>
               <tr>
                 <td class="font-mono">{{ sale.invoiceNumber }}</td>
-                <td>{{ sale.customer?.name || 'Walk-in Customer' }}</td>
-                <td>{{ sale.saleDate | date:'short' }}</td>
+                <td>{{ sale.customer?.name || 'Walk-in' }}</td>
                 <td class="font-semibold">{{ formatCurrency(sale.totalAmount) }}</td>
+                <td>
+                  <span class="text-green-600">{{ formatCurrency(sale.totalProfit) }}</span>
+                </td>
                 <td>
                   <p-button 
                     icon="pi pi-eye" 
                     styleClass="p-button-sm p-button-text"
-                    (onClick)="navigateTo('/sales')">
+                    (onClick)="navigateTo('/sales/' + sale._id)">
                   </p-button>
                 </td>
               </tr>
@@ -197,11 +344,49 @@
             <p-button 
               label="View All Sales" 
               icon="pi pi-list"
-              (onClick)="navigateTo('/sales')">
+              (onClick)="navigateTo('/sales')"
+              size="small">
             </p-button>
           </div>
         </p-card>
       </div>
+
+      <!-- Low Stock Products -->
+      @if (data.inventory.lowStockProducts.length > 0) {
+        <p-card header="Low Stock Alert" class="border-red-200">
+          <p-table [value]="data.inventory.lowStockProducts" [paginator]="false" styleClass="p-datatable-sm">
+            <ng-template pTemplate="header">
+              <tr>
+                <th>Product</th>
+                <th>SKU</th>
+                <th>Current Stock</th>
+                <th>Min Level</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-product>
+              <tr>
+                <td>{{ product.name }}</td>
+                <td class="font-mono">{{ product.sku }}</td>
+                <td class="font-bold text-red-600">{{ product.stock }}</td>
+                <td>{{ product.minStockLevel }}</td>
+                <td>
+                  <p-tag severity="danger" value="Reorder Needed" />
+                </td>
+                <td>
+                  <p-button 
+                    icon="pi pi-shopping-cart" 
+                    styleClass="p-button-sm p-button-success"
+                    (onClick)="navigateTo('/purchases/new?product=' + product._id)"
+                    pTooltip="Create Purchase Order">
+                  </p-button>
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </p-card>
+      }
 
       <!-- Quick Actions -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -213,27 +398,27 @@
           </div>
         </p-card>
 
-        <p-card class="text-center cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/products')">
-          <div class="p-4">
-            <i class="pi pi-box text-3xl text-green-600 mb-3"></i>
-            <h3 class="font-semibold text-lg">Manage Products</h3>
-            <p class="text-gray-600 text-sm">View and edit products</p>
-          </div>
-        </p-card>
-
         <p-card class="text-center cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/purchases/new')">
           <div class="p-4">
-            <i class="pi pi-shopping-bag text-3xl text-orange-600 mb-3"></i>
+            <i class="pi pi-truck text-3xl text-green-600 mb-3"></i>
             <h3 class="font-semibold text-lg">New Purchase</h3>
-            <p class="text-gray-600 text-sm">Add stock from suppliers</p>
+            <p class="text-gray-600 text-sm">Restock inventory</p>
           </div>
         </p-card>
 
-        <p-card class="text-center cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/customers')">
+        <p-card class="text-center cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/customers/new')">
           <div class="p-4">
             <i class="pi pi-user-plus text-3xl text-purple-600 mb-3"></i>
             <h3 class="font-semibold text-lg">Add Customer</h3>
             <p class="text-gray-600 text-sm">Register new customer</p>
+          </div>
+        </p-card>
+
+        <p-card class="text-center cursor-pointer hover:shadow-lg transition-shadow" (click)="navigateTo('/products')">
+          <div class="p-4">
+            <i class="pi pi-box text-3xl text-orange-600 mb-3"></i>
+            <h3 class="font-semibold text-lg">Manage Products</h3>
+            <p class="text-gray-600 text-sm">View and edit products</p>
           </div>
         </p-card>
       </div>
