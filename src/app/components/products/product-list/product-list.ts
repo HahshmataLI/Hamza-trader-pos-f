@@ -254,9 +254,14 @@ getImageUrl(imagePath?: string): string {
     return 'assets/images/placeholder.png';
   }
 
+  // If imagePath already contains "http", return as-is
+  if (imagePath.startsWith('http')) {
+    return imagePath;
+  }
+
+  // Otherwise, prepend server URL (for local images)
   return `${SERVER_URL}${imagePath}`;
 }
-
   confirmDelete(product: Product): void {
     this.confirmationService.confirm({
       message: `Are you sure you want to delete "${product.name}"? This will make the product inactive.`,

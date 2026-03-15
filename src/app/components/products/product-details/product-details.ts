@@ -67,7 +67,15 @@ export class ProductDetails implements OnInit, AfterViewInit {
     }
   }
 getImageUrl(image?: string): string {
+  // If no image, show placeholder
   if (!image) return 'assets/images/placeholder.png';
+
+  // If the image is already an absolute URL (Cloudinary), return as-is
+  if (image.startsWith('http')) {
+    return image;
+  }
+
+  // Otherwise, prepend server URL for local images
   return `${this.SERVER_URL}${image}`;
 }
   hasAttributes(product: any): boolean {
