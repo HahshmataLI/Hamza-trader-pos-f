@@ -249,19 +249,20 @@ export class ProductList implements OnInit, OnDestroy {
   }
 
   // FIXED: Construct full image URL
-getImageUrl(imagePath?: string): string {
-  if (!imagePath) {
+getImageUrl(image?: string): string {
+  if (!image) {
     return 'assets/images/placeholder.png';
   }
 
-  // If imagePath already contains "http", return as-is
-  if (imagePath.startsWith('http')) {
-    return imagePath;
+  // If image is already a full URL (Cloudinary)
+  if (image.startsWith('http://') || image.startsWith('https://')) {
+    return image;
   }
 
-  // Otherwise, prepend server URL (for local images)
-  return `${SERVER_URL}${imagePath}`;
+  // Local server images
+  return `${this.apiUrl}/${image}`;
 }
+
   confirmDelete(product: Product): void {
     this.confirmationService.confirm({
       message: `Are you sure you want to delete "${product.name}"? This will make the product inactive.`,
