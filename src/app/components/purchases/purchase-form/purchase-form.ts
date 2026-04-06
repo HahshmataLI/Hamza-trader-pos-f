@@ -114,21 +114,17 @@ export class PurchaseForm  implements OnInit {
     });
   }
 
-  loadProducts(): void {
-    this.productService.getProducts().subscribe({
-      next: (response) => {
-        this.products.set(response.data as Product[]);
-        this.filteredProducts.set(response.data as Product[]);
-      },
-      error: (error) => {
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to load products'
-        });
-      }
-    });
-  }
+loadProducts(): void {
+  this.productService.getProducts({ limit: 1000 }).subscribe({
+    next: (response) => {
+      this.products.set(response.data);
+      this.filteredProducts.set(response.data);
+    },
+    error: (error) => {
+      console.error(error);
+    }
+  });
+}
 
   loadPurchase(id: string): void {
     this.loading.set(true);

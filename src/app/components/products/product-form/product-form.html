@@ -107,6 +107,8 @@
                 optionLabel="label"
                 optionValue="value"
                 (onChange)="onCategoryChange()"
+                [filter]="true"
+                
               />
               @if (productForm.get('category')?.invalid && productForm.get('category')?.touched) {
                 <small class="text-red-500 block text-sm mt-1">

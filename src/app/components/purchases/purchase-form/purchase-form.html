@@ -85,14 +85,17 @@
           <!-- Product -->
           <div class="field">
             <label class="block text-sm font-medium text-gray-700 mb-2">Product</label>
-            <p-select
+           <p-select
+                
               [(ngModel)]="newItem().product"
-              [options]="filteredProducts()"
+              [options]="products()"
               optionLabel="name"
               optionValue="_id"
               placeholder="Select Product"
               styleClass="w-full"
-            />
+              [filter]="true"
+              filterBy="name"
+            /> 
           </div>
 
           <!-- Quantity -->
