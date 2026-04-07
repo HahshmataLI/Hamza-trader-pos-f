@@ -636,11 +636,15 @@ selectedCamera: MediaDeviceInfo | undefined = undefined;
   }
 
   selectProductFromSearch(product: Product): void {
-  this.addToCart(product, 1, product.mrp);
+    this.currentProduct.set({
+      ...product,
+      tempSalePrice: product.mrp
+    });
+    this.currentQuantity.set(1);
+    this.barcodeMode.set(true);
+    setTimeout(() => this.quantityInput?.nativeElement?.focus(), 100);
+  }
 
-  // Optional: keep search active
-  this.searchTerm.set('');
-}
   // DISCOUNT METHODS
 
   applyDiscountPercentage(percentage: number): void {
