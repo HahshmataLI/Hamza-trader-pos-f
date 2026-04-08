@@ -9,13 +9,40 @@ import { UtilsModule } from '../../../utils.module';
 import { ProgressSpinner } from "primeng/progressspinner";
 import JsBarcode from 'jsbarcode';
 import { SERVER_URL } from '../../../utils/constants';
+import { BarcodePrintService, BarcodeLabel } from '../../../services/barcode-pdf.service';
+
+// PrimeNG imports
+import { DialogModule } from 'primeng/dialog';
+import { ButtonModule } from 'primeng/button';
+import { SelectModule } from 'primeng/select';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { CheckboxModule } from 'primeng/checkbox';
+import { CardModule } from 'primeng/card';
+import { TagModule } from 'primeng/tag';
+import { ToastModule } from 'primeng/toast';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-product-details',
-  imports: [RouterLink, CommonModule, UtilsModule, ProgressSpinner],
+  standalone: true,
+  imports: [
+    RouterLink, 
+    CommonModule, 
+    UtilsModule, 
+    ProgressSpinner,
+    DialogModule,
+    ButtonModule,
+    SelectModule,
+    InputNumberModule,
+    CheckboxModule,
+    CardModule,
+    TagModule,
+    ToastModule,
+    FormsModule
+  ],
   templateUrl: './product-details.html',
   styleUrl: './product-details.css',
-  providers: [MessageService],
+  providers: [MessageService, BarcodePrintService],
 })
 export class ProductDetails implements OnInit, AfterViewInit {
   @ViewChild('barcodeCanvas') barcodeCanvas!: ElementRef<HTMLCanvasElement>;
@@ -27,6 +54,7 @@ export class ProductDetails implements OnInit, AfterViewInit {
   private productService = inject(ProductService);
   private messageService = inject(MessageService);
   authService = inject(AuthService);
+  private barcodePrintService = inject(BarcodePrintService);
 
   productId: string | null = null;
   product = signal<Product | null>(null);
@@ -43,8 +71,13 @@ export class ProductDetails implements OnInit, AfterViewInit {
   showProductName = signal(true);
   showPrice = signal(false);
   SERVER_URL = SERVER_URL;
+  
   // Barcode preview URL
   barcodePreviewUrl = signal<string | null>(null);
+  
+  // A4 layout options
+  labelSize = signal<'small' | 'standard' | 'large'>('standard');
+  gridColumns = signal<number>(3);
 
   ngOnInit(): void {
     this.productId = this.route.snapshot.paramMap.get('id');
@@ -66,18 +99,15 @@ export class ProductDetails implements OnInit, AfterViewInit {
       setTimeout(() => this.generateBarcode(), 200);
     }
   }
-getImageUrl(image?: string): string {
-  // If no image, show placeholder
-  if (!image) return 'assets/images/placeholder.png';
 
-  // If the image is already an absolute URL (Cloudinary), return as-is
-  if (image.startsWith('http')) {
-    return image;
+  getImageUrl(image?: string): string {
+    if (!image) return 'assets/images/placeholder.png';
+    if (image.startsWith('http')) {
+      return image;
+    }
+    return `${this.SERVER_URL}${image}`;
   }
 
-  // Otherwise, prepend server URL for local images
-  return `${this.SERVER_URL}${image}`;
-}
   hasAttributes(product: any): boolean {
     return product?.attributes && Object.keys(product.attributes).length > 0;
   }
@@ -161,21 +191,17 @@ getImageUrl(image?: string): string {
     if (!barcodeValue) return;
 
     try {
-      // Use preview canvas if available, otherwise use the hidden canvas
       const canvas = this.barcodePreview?.nativeElement || this.barcodeCanvas?.nativeElement;
       if (!canvas) return;
 
-      // Clear previous barcode
       const context = canvas.getContext('2d');
       if (context) {
         context.clearRect(0, 0, canvas.width, canvas.height);
       }
 
-      // Set canvas dimensions
       canvas.width = 400;
       canvas.height = this.barcodeHeight() + 60;
 
-      // Generate new barcode with non-null barcode value
       JsBarcode(canvas, barcodeValue, {
         format: this.barcodeFormat(),
         width: this.barcodeWidth(),
@@ -187,7 +213,6 @@ getImageUrl(image?: string): string {
         lineColor: '#000000'
       });
 
-      // Update preview URL
       this.barcodePreviewUrl.set(canvas.toDataURL('image/png'));
 
     } catch (error) {
@@ -213,15 +238,12 @@ getImageUrl(image?: string): string {
       return;
     }
 
-    // Generate barcode before printing
     this.generateBarcode();
 
     setTimeout(() => {
-      // Use preview canvas if available, otherwise create temporary canvas
       let canvas: HTMLCanvasElement | null = this.barcodePreview?.nativeElement || this.barcodeCanvas?.nativeElement;
       
       if (!canvas) {
-        // Create temporary canvas if needed
         canvas = document.createElement('canvas');
         JsBarcode(canvas, barcodeValue, {
           format: this.barcodeFormat(),
@@ -240,7 +262,6 @@ getImageUrl(image?: string): string {
   }
 
   private printFromCanvas(canvas: HTMLCanvasElement, product: Product, barcodeValue: string): void {
-    // Create print window
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       this.messageService.add({
@@ -251,10 +272,8 @@ getImageUrl(image?: string): string {
       return;
     }
 
-    // Generate barcode image data URL
     const barcodeDataUrl = canvas.toDataURL('image/png');
 
-    // Create HTML content for printing
     let printContent = `
       <!DOCTYPE html>
       <html>
@@ -312,14 +331,13 @@ getImageUrl(image?: string): string {
       <body>
     `;
 
-    // Add copies
     for (let i = 0; i < this.printCopies(); i++) {
       printContent += `
         <div class="barcode-container">
           ${this.showProductName() ? `
             <div class="product-info">
               <div class="product-name">${this.escapeHtml(product.name)}</div>
-              ${this.showPrice() ? `<div class="product-price">MRP: ₹${product.mrp}</div>` : ''}
+              ${this.showPrice() ? `<div class="product-price">MRP: PKR ${product.mrp}</div>` : ''}
             </div>
           ` : ''}
           <img src="${barcodeDataUrl}" class="barcode-image" alt="Barcode" />
@@ -335,11 +353,9 @@ getImageUrl(image?: string): string {
       </html>
     `;
 
-    // Write to print window and print
     printWindow.document.write(printContent);
     printWindow.document.close();
     
-    // Wait for images to load
     setTimeout(() => {
       printWindow.focus();
       printWindow.print();
@@ -354,7 +370,6 @@ getImageUrl(image?: string): string {
     });
   }
 
-  // Helper method to escape HTML special characters
   private escapeHtml(text: string): string {
     const div = document.createElement('div');
     div.textContent = text;
@@ -373,7 +388,6 @@ getImageUrl(image?: string): string {
       const canvas = this.barcodePreview?.nativeElement || this.barcodeCanvas?.nativeElement;
       if (!canvas) return;
 
-      // Create download link
       const link = document.createElement('a');
       link.download = `${product.name.replace(/\s+/g, '_')}_barcode.png`;
       link.href = canvas.toDataURL('image/png');
@@ -395,9 +409,93 @@ getImageUrl(image?: string): string {
     this.generateBarcode();
   }
 
-  // Check if barcode exists
   hasBarcode(): boolean {
     const product = this.product();
     return !!(product?.barcode);
+  }
+
+  // A4 Sheet Printing Method
+  printA4BarcodeSheet(): void {
+    const product = this.product();
+    if (!product?.barcode) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Warning',
+        detail: 'No barcode available for this product'
+      });
+      return;
+    }
+
+    const barcodeLabel: BarcodeLabel = {
+      code: product.barcode,
+      productName: product.name,
+      price: product.mrp,
+      sku: product.sku
+    };
+
+    const numberOfCopies = this.printCopies();
+    
+    this.barcodePrintService.printSingleProductBarcodes(
+      barcodeLabel,
+      numberOfCopies,
+      {
+        labelSize: this.labelSize(),
+        columns: this.gridColumns(),
+        showProductName: this.showProductName(),
+        showPrice: this.showPrice(),
+        showSku: true,
+        copiesPerProduct: numberOfCopies
+      }
+    );
+
+    this.closeBarcodeModal();
+    
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: `${numberOfCopies} barcode(s) sent to printer on A4 sheet`
+    });
+  }
+
+  // Calculate max labels per page
+  calculateMaxLabels(): number {
+    const labelDim = {
+      small: { width: 40, height: 25 },
+      standard: { width: 50, height: 30 },
+      large: { width: 62, height: 35 }
+    }[this.labelSize()];
+    
+    const availableWidth = 210 - 20; // A4 width minus margins
+    const availableHeight = 297 - 20; // A4 height minus margins
+    const columns = Math.floor(availableWidth / (labelDim.width + 5));
+    const rows = Math.floor(availableHeight / (labelDim.height + 5));
+    
+    return Math.max(1, columns * rows);
+  }
+
+  onLabelSizeChange(): void {
+    const maxLabels = this.calculateMaxLabels();
+    if (this.printCopies() > maxLabels) {
+      this.printCopies.set(maxLabels);
+    }
+  }
+
+  // Print multiple products (for bulk printing)
+  printMultipleBarcodes(products: any[]): void {
+    const barcodeLabels: BarcodeLabel[] = products.map(product => ({
+      code: product.barcode,
+      productName: product.name,
+      price: product.mrp,
+      sku: product.sku
+    }));
+
+    this.barcodePrintService.printBarcodeSheet(barcodeLabels, {
+      labelSize: this.labelSize(),
+      columns: this.gridColumns(),
+      showProductName: true,
+      showPrice: true,
+      showSku: true,
+      copiesPerProduct: 1
+    });
   }
 }

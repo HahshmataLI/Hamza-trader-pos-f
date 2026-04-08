@@ -31,14 +31,25 @@
       />
     </div>
   </div>
-@if (product()?.barcode) {
-    <p-button 
-      label="Print Barcode" 
-      icon="pi pi-qrcode" 
-      severity="success"
-      (onClick)="openBarcodeModal()"
-    />
+
+  <!-- Barcode Print Buttons -->
+  @if (product()?.barcode) {
+    <div class="flex gap-2">
+      <p-button 
+        label="Print Single Label" 
+        icon="pi pi-print" 
+        severity="success"
+        (onClick)="openBarcodeModal()"
+      />
+      <p-button 
+        label="Print A4 Sheet" 
+        icon="pi pi-table" 
+        severity="info"
+        (onClick)="printA4BarcodeSheet()"
+      />
+    </div>
   }
+
   <!-- Loading State -->
   @if (loading()) {
     <div class="flex justify-center items-center py-12">
@@ -207,18 +218,18 @@
         }
 
         <!-- Attributes -->
-      @if (hasAttributes(product)) {
-  <p-card header="Product Attributes">
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-      @for (item of getAttributesList(product); track item.key) {
-        <div class="bg-gray-50 p-3 rounded-lg">
-          <p class="text-sm text-gray-500 capitalize">{{ item.key }}</p>
-          <p class="font-semibold">{{ item.value }}</p>
-        </div>
-      }
-    </div>
-  </p-card>
-}
+        @if (hasAttributes(product)) {
+          <p-card header="Product Attributes">
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+              @for (item of getAttributesList(product); track item.key) {
+                <div class="bg-gray-50 p-3 rounded-lg">
+                  <p class="text-sm text-gray-500 capitalize">{{ item.key }}</p>
+                  <p class="font-semibold">{{ item.value }}</p>
+                </div>
+              }
+            </div>
+          </p-card>
+        }
       </div>
     </div>
   }
@@ -243,12 +254,11 @@
 <p-toast />
 
 <!-- Barcode Modal -->
-<!-- Barcode Modal -->
 <p-dialog 
-  header="Print Barcode" 
+  header="Print Barcode Labels" 
   [(visible)]="showBarcodeModal" 
   [modal]="true"
-  [style]="{ width: '550px' }"
+  [style]="{ width: '650px' }"
   [draggable]="false"
   [resizable]="false"
   (onHide)="closeBarcodeModal()"
@@ -294,13 +304,14 @@
         </div>
         
         <div>
-          <label class="block text-sm text-gray-600 mb-1">Copies</label>
+          <label class="block text-sm text-gray-600 mb-1">Number of Copies</label>
           <p-inputNumber 
             [(ngModel)]="printCopies" 
             [min]="1" 
-            [max]="100"
+            [max]="500"
             styleClass="w-full"
           />
+          <small class="text-xs text-gray-500">Max per A4: {{ calculateMaxLabels() }}</small>
         </div>
 
         <div>
@@ -339,7 +350,48 @@
         </div>
       </div>
 
-      <!-- Options -->
+      <!-- A4 Sheet Layout Options -->
+      <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+        <h4 class="font-semibold text-sm mb-3">A4 Sheet Layout Options</h4>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">Label Size</label>
+            <p-select 
+              [(ngModel)]="labelSize" 
+              (onChange)="onLabelSizeChange()"
+              [options]="[
+                { label: 'Small (40x25mm) - ~70 labels/page', value: 'small' },
+                { label: 'Standard (50x30mm) - ~45 labels/page', value: 'standard' },
+                { label: 'Large (62x35mm) - ~30 labels/page', value: 'large' }
+              ]"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-full"
+            />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">Columns per Row</label>
+            <p-select 
+              [(ngModel)]="gridColumns" 
+              [options]="[
+                { label: '2 Columns', value: 2 },
+                { label: '3 Columns', value: 3 },
+                { label: '4 Columns', value: 4 },
+                { label: '5 Columns', value: 5 }
+              ]"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-full"
+            />
+          </div>
+        </div>
+        <div class="mt-3 text-xs text-gray-500">
+          <i class="pi pi-info-circle"></i>
+          Maximum {{ calculateMaxLabels() }} labels per A4 sheet with current settings
+        </div>
+      </div>
+
+      <!-- Display Options -->
       <div class="flex flex-wrap items-center gap-4 mt-2">
         <div class="flex items-center gap-2">
           <p-checkbox 
@@ -366,8 +418,9 @@
           <div>
             <p class="text-sm text-blue-900 font-medium mb-1">Barcode: {{ product()?.barcode }}</p>
             <p class="text-xs text-blue-700">
-              This barcode will be printed on labels. Make sure your printer is configured correctly with label paper.
-              <br>Recommended label size: 2" x 1" (50mm x 25mm)
+              <strong>Print Single Label:</strong> Prints individual labels one per page.<br>
+              <strong>Print A4 Sheet:</strong> Creates a grid layout optimized for cutting. All barcodes are high-resolution and scannable.
+              <br><br>Recommended label size: 2" x 1" (50mm x 30mm)
             </p>
           </div>
         </div>
@@ -390,10 +443,16 @@
         (onClick)="downloadBarcode()"
       />
       <p-button 
-        label="Print" 
+        label="Print Single Labels" 
         icon="pi pi-print"
         severity="success"
         (onClick)="printBarcode()"
+      />
+      <p-button 
+        label="Print A4 Sheet" 
+        icon="pi pi-table"
+        severity="primary"
+        (onClick)="printA4BarcodeSheet()"
       />
     </div>
   </div>

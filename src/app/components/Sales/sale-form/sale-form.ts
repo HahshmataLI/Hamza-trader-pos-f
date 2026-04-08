@@ -419,30 +419,39 @@ selectedCamera: MediaDeviceInfo | undefined = undefined;
     }
   }
 
-  addCurrentProductWithQuantity(): void {
-    const product = this.currentProduct();
-    const quantity = this.currentQuantity();
-    const price = product?.tempSalePrice ?? product?.mrp ?? 0;
-    
-    if (!product) return;
-    
-    // Validate price
-    const priceError = this.validatePrice(product, price);
-    if (priceError) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Invalid Price',
-        detail: priceError
-      });
-      return;
-    }
-
-    this.addToCart(product, quantity, price);
-    this.currentProduct.set(null);
-    this.currentQuantity.set(1);
-    this.priceError.set('');
+ addCurrentProductWithQuantity(): void {
+  const product = this.currentProduct();
+  const quantity = this.currentQuantity();
+  const price = product?.tempSalePrice ?? product?.mrp ?? 0;
+  
+  if (!product) return;
+  
+  // Validate price
+  const priceError = this.validatePrice(product, price);
+  if (priceError) {
+    this.messageService.add({
+      severity: 'error',
+      summary: 'Invalid Price',
+      detail: priceError
+    });
+    return;
   }
 
+  // Add product to cart
+  this.addToCart(product, quantity, price);
+
+  // Reset current product & quantity
+  this.currentProduct.set(null);
+  this.currentQuantity.set(1);
+  this.priceError.set('');
+
+  // ✅ Focus input depending on mode
+  if (this.barcodeMode()) {
+    setTimeout(() => this.barcodeInput?.nativeElement?.focus(), 100);
+  } else {
+    setTimeout(() => this.quantityInput?.nativeElement?.focus(), 100);
+  }
+}
   addToCart(product: Product, quantity: number, unitSalePrice: number = product.mrp): void {
     // Validate stock
     if (quantity > product.stock) {
@@ -635,15 +644,43 @@ selectedCamera: MediaDeviceInfo | undefined = undefined;
     }
   }
 
-  selectProductFromSearch(product: Product): void {
-    this.currentProduct.set({
-      ...product,
-      tempSalePrice: product.mrp
+selectProductFromSearch(product: Product): void {
+  if (!product.isActive) {
+    this.messageService.add({
+      severity: 'error',
+      summary: 'Inactive Product',
+      detail: `${product.name} is not available for sale`
     });
-    this.currentQuantity.set(1);
-    this.barcodeMode.set(true);
+    return;
+  }
+
+  if (product.stock <= 0) {
+    this.messageService.add({
+      severity: 'error',
+      summary: 'Out of Stock',
+      detail: `${product.name} is out of stock`
+    });
+    return;
+  }
+
+  // Set current product with default tempSalePrice and quantity
+  this.currentProduct.set({ ...product, tempSalePrice: product.mrp });
+  this.currentQuantity.set(1);
+
+  // Clear search UI
+  this.searchTerm.set('');
+  this.filteredProducts.set([]);
+
+  // ✅ Auto-add to cart immediately
+  this.addCurrentProductWithQuantity();
+
+  // Focus input based on mode for next product
+  if (this.barcodeMode()) {
+    setTimeout(() => this.barcodeInput?.nativeElement?.focus(), 100);
+  } else {
     setTimeout(() => this.quantityInput?.nativeElement?.focus(), 100);
   }
+}
 
   // DISCOUNT METHODS
 
