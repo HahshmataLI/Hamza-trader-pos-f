@@ -23,7 +23,7 @@ export interface PrintOptions {
 export class BarcodePrintService {
   
   private readonly LABEL_SIZES = {
-    small: { width: 40, height: 25 },
+   small: { width: 40, height: 10 }, // 🔥 reduce height
     standard: { width: 50, height: 30 },
     large: { width: 62, height: 35 }
   };
@@ -53,7 +53,8 @@ export class BarcodePrintService {
     });
 
     const labelDim = this.LABEL_SIZES[labelSize];
-    const gridConfig = this.calculateGridLayout(labelDim, columns);
+    // const gridConfig = this.calculateGridLayout(labelDim, columns);
+    const gridConfig = this.calculateGridLayout(labelDim, 4);
     const printHtml = this.generatePrintHtml(
       expandedProducts,
       gridConfig,
@@ -70,29 +71,39 @@ export class BarcodePrintService {
     });
   }
 
-  private calculateGridLayout(labelDim: { width: number; height: number }, preferredColumns: number): any {
-    const availableWidth = this.A4_WIDTH - (this.PAGE_MARGIN * 2);
-    const availableHeight = this.A4_HEIGHT - (this.PAGE_MARGIN * 2);
-    
-    let columns = Math.floor(availableWidth / (labelDim.width + 5));
-    columns = Math.min(columns, preferredColumns);
-    columns = Math.max(columns, 2);
-    
-    const rows = Math.floor(availableHeight / (labelDim.height + 5));
-    const horizontalGap = columns > 1 ? (availableWidth - (columns * labelDim.width)) / (columns - 1) : 0;
-    const verticalGap = rows > 1 ? (availableHeight - (rows * labelDim.height)) / (rows - 1) : 0;
-    
-    return {
-      columns,
-      rows,
-      horizontalGap,
-      verticalGap,
-      labelWidth: labelDim.width,
-      labelHeight: labelDim.height,
-      margin: this.PAGE_MARGIN
-    };
-  }
+private calculateGridLayout(
+  labelDim: { width: number; height: number },
+  preferredColumns: number
+): any {
 
+  const availableWidth = this.A4_WIDTH - (this.PAGE_MARGIN * 2);
+  const availableHeight = this.A4_HEIGHT - (this.PAGE_MARGIN * 2);
+
+  const columns = preferredColumns;
+
+  // ✅ FORCE 10 ROWS
+  const rows = 10;
+
+  const GAP = 1; // spacing between rows
+
+  const verticalGapsTotal = (rows - 1) * GAP;
+
+  // ✅ Calculate exact label height that fits
+  const labelHeight = (availableHeight - verticalGapsTotal) / rows;
+
+  const horizontalGap = GAP;
+  const verticalGap = GAP;
+
+  return {
+    columns,
+    rows,
+    horizontalGap,
+    verticalGap,
+    labelWidth: labelDim.width,
+    labelHeight: labelHeight, // ✅ dynamic height
+    margin: this.PAGE_MARGIN
+  };
+}
   private generatePrintHtml(products: BarcodeLabel[], gridConfig: any, displayOptions: any): string {
     const { columns, rows, labelWidth, labelHeight, horizontalGap, verticalGap, margin } = gridConfig;
     const labelsPerPage = columns * rows;
@@ -142,9 +153,10 @@ if (pageProducts.length < labelsPerPage && pageProducts.length > 0) {
         
         if (product) {
           const canvasId = `barcode-${pageNumber}-${row}-${col}`;
-          const nameFontSize = labelHeight >= 30 ? '10pt' : '8pt';
+          // const nameFontSize = labelHeight >= 30 ? '10pt' : '8pt';
           const priceFontSize = labelHeight >= 30 ? '9pt' : '7pt';
           const barcodeNumberFontSize = labelHeight >= 30 ? '8pt' : '6pt';
+          const nameFontSize = labelHeight >= 30 ? '8pt' : '6pt';
                 // ${displayOptions.showSku && product.sku ? `<div class="product-sku">SKU: ${product.sku}</div>` : ''}
           
           html += `
@@ -183,7 +195,11 @@ if (pageProducts.length < labelsPerPage && pageProducts.length > 0) {
     
     return html;
   }
-
+// .product-sku {
+//             font-size: 6pt;
+//             color: #666;
+//             margin-bottom: 1mm;
+//           }
   private getFullHtmlTemplate(content: string, labelWidth: number, labelHeight: number, labelSize: string): string {
     // Calculate optimal barcode dimensions based on label size
     const barcodeConfig = this.getBarcodeConfig(labelHeight);
@@ -223,7 +239,7 @@ if (pageProducts.length < labelsPerPage && pageProducts.length > 0) {
           .label-row {
             display: flex;
             justify-content: flex-start;
-            margin: 0;
+            margin-x: 4;
             padding: 0;
           }
           
@@ -243,21 +259,21 @@ if (pageProducts.length < labelsPerPage && pageProducts.length > 0) {
             background: #fafafa;
           }
           
-          .label-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            height: 100%;
-            padding: 2mm;
-            box-sizing: border-box;
-          }
+         .label-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center; /* Change from flex-start to center */
+  text-align: center;
+  height: 100%;
+  padding: 1mm;            /* Slightly increase padding to prevent touching edges */
+  box-sizing: border-box;
+}
           
           .product-name {
             font-weight: bold;
             color: #000;
-            margin-bottom: 1mm;
+            margin-bottom: 0.2mm;
             line-height: 1.2;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -268,19 +284,16 @@ if (pageProducts.length < labelsPerPage && pageProducts.length > 0) {
             width: 100%;
           }
           
-          .product-sku {
-            font-size: 6pt;
-            color: #666;
-            margin-bottom: 1mm;
-          }
+          
           
           .barcode-wrapper {
             display: flex;
             justify-content: center;
             align-items: center;
-            margin: 1mm 0;
+            margin: 0.2mm 0;
             width: 100%;
-            min-height: ${barcodeConfig.height}px;
+             padding: 0 2mm;
+            min-height: auto; 
           }
           
           .barcode-canvas {
@@ -292,7 +305,7 @@ if (pageProducts.length < labelsPerPage && pageProducts.length > 0) {
           .barcode-number {
             font-family: 'Courier New', monospace;
             color: #333;
-            margin: 1mm 0;
+            margin: 0.2mm 0 0 0; 
             letter-spacing: 0.5px;
             word-break: break-all;
           }
