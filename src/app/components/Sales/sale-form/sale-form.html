@@ -1,5 +1,5 @@
 <!-- sale-form.html - Enhanced POS-style layout with bargaining support -->
-<div class="h-full flex flex-col">
+<div class="min-h-screen flex flex-col">
   <!-- Header -->
   <div class="bg-white border-b px-6 py-4 flex justify-between items-center">
     <div>
@@ -25,9 +25,9 @@
   </div>
 
   <!-- Main POS Area -->
-  <div class="flex-1 flex overflow-hidden">
+  <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
     <!-- Left Side - Cart -->
-    <div class="flex-1 flex flex-col overflow-hidden border-r">
+    <div class="flex-1 flex flex-col overflow-hidden lg:border-r border-b lg:border-b-0">
       <!-- Cart Header -->
       <div class="bg-gray-50 px-6 py-3 border-b flex justify-between items-center">
         <div class="flex items-center space-x-4">
@@ -84,68 +84,65 @@
                       />
                     </div>
                     
-                    <div class="grid grid-cols-5 gap-4 mt-4">
-                      <!-- Quantity -->
-                      <div>
-                        <label class="block text-xs text-gray-500 mb-1">Quantity</label>
-                        <p-inputNumber
-                          [(ngModel)]="item.quantity"
-                          [min]="1"
-                          [max]="item.product.stock"
-                          mode="decimal"
-                          styleClass="w-full"
-                          (onInput)="updateQuantity(i, item.quantity)"
-                        />
-                      </div>
-                      
-                      <!-- Unit Price -->
-                      <div>
-                        <label class="block text-xs text-gray-500 mb-1">Sale Price</label>
-                        <p-inputNumber
-                          [(ngModel)]="item.unitSalePrice"
-                          [min]="item.product.minSalePrice"
-                          [max]="item.product.mrp"
-                          mode="currency"
-                          currency="PKR"
-                          locale="en-PK"
-                          styleClass="w-full"
-                          (onInput)="updatePrice(i, item.unitSalePrice)"
-                          [class.ng-invalid]="item.unitSalePrice < item.product.minSalePrice || item.unitSalePrice > item.product.mrp"
-                        />
-                        @if (item.unitSalePrice < item.product.minSalePrice) {
-                          <small class="text-red-500">Below minimum!</small>
-                        }
-                        @if (item.unitSalePrice > item.product.mrp) {
-                          <small class="text-red-500">Above MRP!</small>
-                        }
-                      </div>
-                      
-                      <!-- Total -->
-                      <div>
-                        <label class="block text-xs text-gray-500 mb-1">Total</label>
-                        <div class="text-lg font-bold text-green-600">
-                          {{ item.total | currency:'PKR':'symbol':'1.0-0' }}
-                        </div>
-                      </div>
-                      
-                      <!-- Profit -->
-                      <div>
-                        <label class="block text-xs text-gray-500 mb-1">Profit</label>
-                        <div class="text-sm font-semibold" 
-                             [class.text-green-600]="item.profit > 0"
-                             [class.text-red-600]="item.profit < 0">
-                          {{ item.profit | currency:'PKR':'symbol':'1.0-0' }}
-                        </div>
-                      </div>
+   <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-4">
 
-                      <!-- Margin -->
-                      <div>
-                        <label class="block text-xs text-gray-500 mb-1">Margin</label>
-                        <div class="text-sm font-semibold text-blue-600">
-                          {{ ((item.unitSalePrice - item.product.costPrice) / item.product.costPrice * 100).toFixed(1) }}%
-                        </div>
-                      </div>
-                    </div>
+  <!-- Quantity -->
+  <div class="col-span-1">
+    <label class="block text-xs text-gray-500 mb-1">Qty</label>
+    <p-inputNumber
+      [(ngModel)]="item.quantity"
+      [min]="1"
+      [max]="item.product.stock"
+      mode="decimal"
+      styleClass="w-full text-sm"
+      inputStyleClass="w-full text-center"
+      (onInput)="updateQuantity(i, item.quantity)"
+    />
+  </div>
+
+  <!-- Price -->
+  <div class="col-span-1">
+    <label class="block text-xs text-gray-500 mb-1">Price</label>
+    <p-inputNumber
+      [(ngModel)]="item.unitSalePrice"
+      [min]="item.product.minSalePrice"
+      [max]="item.product.mrp"
+      mode="currency"
+      currency="PKR"
+      locale="en-PK"
+      styleClass="w-full text-sm"
+      inputStyleClass="w-full text-center"
+      (onInput)="updatePrice(i, item.unitSalePrice)"
+    />
+  </div>
+
+  <!-- Total -->
+  <div class="col-span-1 flex flex-col justify-center">
+    <label class="block text-xs text-gray-500 mb-1">Total</label>
+    <div class="text-sm font-bold text-green-600 truncate">
+      {{ item.total | currency:'PKR':'symbol':'1.0-0' }}
+    </div>
+  </div>
+
+  <!-- Profit -->
+  <div class="col-span-1 flex flex-col justify-center">
+    <label class="block text-xs text-gray-500 mb-1">Profit</label>
+    <div class="text-sm font-semibold"
+         [class.text-green-600]="item.profit > 0"
+         [class.text-red-600]="item.profit < 0">
+      {{ item.profit | currency:'PKR':'symbol':'1.0-0' }}
+    </div>
+  </div>
+
+  <!-- Margin -->
+  <div class="col-span-1 flex flex-col justify-center">
+    <label class="block text-xs text-gray-500 mb-1">Margin</label>
+    <div class="text-sm font-semibold text-blue-600">
+      {{ ((item.unitSalePrice - item.product.costPrice) / item.product.costPrice * 100).toFixed(1) }}%
+    </div>
+  </div>
+
+</div>
                   </div>
                 </div>
               </div>
@@ -156,7 +153,7 @@
     </div>
 
     <!-- Right Side - Controls -->
-    <div class="w-96 bg-gray-50 flex flex-col overflow-y-auto">
+    <div class="w-full lg:w-96 bg-gray-50 flex flex-col overflow-y-auto">
       <!-- Mode Toggle -->
       <div class="p-4 border-b">
         <div class="flex rounded-lg bg-gray-200 p-1">
